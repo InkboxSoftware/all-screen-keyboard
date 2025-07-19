@@ -1,5 +1,5 @@
 # The open source all-screen keyboard
-The first open source all-screen keyboard. This repository contains all the digital files used to produce the all-screen keyboard created by Inkbox Software in this video: 
+The first open source all-screen keyboard. This repository contains all the digital files used to produce the all-screen keyboard created by Inkbox Software in this video: https://www.youtube.com/watch?v=hqKPu2BEkI0
 
 ## Future of the all-screen keyboard?
 The goal of this project is to create a robust DIY guide for creating an all-screen keyboard. Currentyle there are a couple of software issues that need to be resolved, but more importantly the keys and frames themselves need to be remolded in order to make them more suitable for viewing and mass production. Members of the community are looking towards how to create a cheaper version out of some other material than 3D printed resin. Once we solve these issues, version 2 will be released to the public via this repository. 
