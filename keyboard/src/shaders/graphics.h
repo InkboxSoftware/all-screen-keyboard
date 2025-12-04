@@ -1,3 +1,5 @@
+//graphics.h
+
 //standard libraries
 #include <stdio.h>
 #include <iostream>
@@ -7,9 +9,8 @@
 #include <fstream>
 #include <thread>
 #include <pthread.h>
-#include <atomic>
 
-//graphics libraries------
+//graphics libraries
 #include <GLES3/gl3.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_opengles2.h>
@@ -25,39 +26,29 @@ extern "C" {
 #include "shader.h"
 #include "texture.h"
 #include "text.h"
-#include "key.h"
 
-
-#define FORSHIFTTEXTURE 0x11
-#define FORCTRLTEXTURE 0x022
-#define FORMETATEXTURE 0x44
-#define FORALTTEXTURE 0x88
-#define FORFNTEXTURE 0x100
-#define FORNORMALTEXTURE 0x200
-
-#define MAXZLEVEL 5
+#define FORNORMALTEXTURE 512
+#define FORSHIFTTEXTURE 1024
+#define FORCTRLTEXTURE 2048
+#define FORALTTEXTURE 4096
+#define FORFNTEXTURE 8192
 
 class window{
 	
 public:
 	int initialize(int windowWidth, int windowHeight, bool fullscreen = true);
-	int runWindow(std::vector<key*> keys);
-
-	//set modifier keys
-	int setModifierKeys(std::vector<int> &leftShift, std::vector<int> &leftCtrl, std::vector<int> &leftAlt, std::vector<int> &leftUI, 
-						std::vector<int> &rightShift, std::vector<int> &rightCtrl, std::vector<int> &rightAlt, std::vector<int> &rightUI,
-						std::vector<int> &fn, std::vector<int> &caps);
+	int runWindow(bool* pressedKeys);
 
 	//drawing functions:
-	int drawRect(int z, int x, int y, int width, int height, int r, int g, int b, int a, int keyID=-1, int customShader=-1);
-	int drawCircle(int z, int centerX, int centerY, int radius, int segments, int r, int g, int b, int a, int keyID=-1, int customShader=-1);
+	int drawRect(int x, int y, int width, int height, int r, int g, int b, int a, int keyID=-1);
+	int drawCircle(int centerX, int centerY, int radius, int segments, int r, int g, int b, int a, int keyID=-1);
 
 	int setFont(const char* fontName);	
-	int drawText(const char* text, int z, int x, int y, int width, int height, int r, int g, int b, int a, int keyID=-1, int modifier=-1, int customShader=-1);
+	int drawText(const char* text, int x, int y, int width, int height, int r, int g, int b, int a, int keyID=-1);
 		//text will appear in squished into this box
 
 	//drawImage
-	int drawImage(const char* src, int z, int x, int y, int width, int height, int a, int keyID=-1, int modifier=-1, int customShader=-1);
+	int drawImage(const char* src, int x, int y, int width, int height, int a, int keyID=-1);
 
 	//writeText
 	text* writeText(const char* inputText, int x, int y, float size, int r, int g, int b, int a);
@@ -80,10 +71,10 @@ public:
 	int loadVideo(const char* filename, int x, int y, int w, int h);
 
 	//load shaders:
-	int loadCustomShaderProgram(const char* vertexShaderFilename, const char* fragmentShaderFilename);
-	int setCustomGlobalTextureShader(int index);
-	int setCustomGlobalPressedTextureShader(int index);
-
+	int loadCustomShaderProgram(const char* vertexShaderFilename, const char* fragmentShaderFilename, int type);
+		#define TYPE_PRESS_TEXTURE_SHADER 0
+		#define TYPE_TEXTURE_SHADER 1
+		#define TYPE_OTHER_SHADER 2
 	//clear:
 	void clearGraphicsMemory();
 		//reset all vector lists, vram VAO and VBO, texture count var, reset pressShaderProgram
@@ -95,35 +86,24 @@ public:
 	void requestClear();
 	bool asyncFunctionCompleted();
 	int asyncOutput();
-	void requestCustomShader(const char* vertexShaderFilename, const char* fragmentShaderFilename);
-	void requestDrawRect(int z, int x, int y, int width, int height, int r, int g, int b, int a, int keyID=-1, int customShader=-1);
+	void requestCustomShader(const char* vertexShaderFilename, const char* fragmentShaderFilename, int type);
+	void requestDrawRect(int x, int y, int width, int height, int r, int g, int b, int a, int keyID=-1);
 	void requestSetbackgroundImage(const char* src);
-	void requestDrawCircle(int z, int centerX, int centerY, int radius, int segments, int r, int g, int b, int a, int keyID=-1, int customShader=-1);
-	void requestDrawText(const char* text, int z, int x, int y, int width, int height, int r, int g, int b, int a, int keyID=-1, int modifier=-1, int customShader=-1);
-	void requestDrawImage(const char* src, int z, int x, int y, int width, int height, int a, int keyID=-1, int modifier=-1, int customShader=-1);
+	void requestDrawCircle(int centerX, int centerY, int radius, int segments, int r, int g, int b, int a, int keyID=-1);
+	void requestDrawText(const char* text, int x, int y, int width, int height, int r, int g, int b, int a, int keyID=-1);
+	void requestDrawImage(const char* src, int x, int y, int width, int height, int a, int keyID=-1);
 	bool isRendering();
-	
-	struct touchEvent {
-		float x;
-		float y;
-		bool press;	//if false = release
-	};
-	
-	//keyboard event processing:
-	std::atomic<int> accessInputMUX{0};
-	std::atomic<int> eventsToProcess{0};
-	std::vector<touchEvent> touchIOqueue;
 	
 private:
 		//multithread variables: (move these down to private later)
 		bool asyncToDo = false;
 		bool needToClear = false;
 		int asyncOutputValue = -1;
-		bool needCustomShader = false; const char* vertexShaderFileNameREQ; const char* fragmentShaderFilenameREQ;
-		bool needDrawRect = false; int zREQ; int xREQ; int yREQ; int widthREQ; int heightREQ; int rREQ; int gREQ; int bREQ; int aREQ; int keyIDREQ=-1;
+		bool needCustomShader = false; const char* vertexShaderFileNameREQ; const char* fragmentShaderFilenameREQ; int typeREQ; 
+		bool needDrawRect = false; int xREQ; int yREQ; int widthREQ; int heightREQ; int rREQ; int gREQ; int bREQ; int aREQ; int keyIDREQ=-1;
 		bool needSetBackground = false; const char* srcREQ;
 		bool needDrawCircle = false; int centerXREQ; int centerYREQ; int radiusREQ; int segmentsREQ;
-		bool needDrawText = false; const char* textREQ; int modifierREQ; int customShaderREQ;
+		bool needDrawText = false; const char* textREQ;
 		bool needDrawImage = false;
 		
 		
@@ -146,37 +126,31 @@ private:
 		float a;
 	};
 	struct order{
-		int z;						//which layer does the graphic appear on?
-		int graphicType;			//0 = vectorShape, 1 = vectorCircle, 2 = vectorText/vectorImage
-		unsigned int relativeIndex;	//index of graphic in the vector where the VAO is stored
-		int keyID;					//keyID of relevant key, no key = -1
-		int heldTypeModifier;		//-1 if no keyHeld types for key, else defines the mod key to be used
-		int customShader;			//-1 if no custom shader
+		//int absoluteOrder;	this is just the index of the item in the vector
+		int listType;				//0 = vectorShape, 1 = vectorCircle, 2 = vectorText/vectorImage
+		unsigned int relativeIndex;	//index in the above vector
+		int keyTieID;				//keyID of relevant key, default -1
+		int keyHeldType;			//-1 if no keyHeld types for key, else defines the current key down type
 	};
-	#define DEFAULTSHAPESHADER -2
-	#define DEFAULTCIRCLESHADER -3
-	#define DEFAULTTEXTIMAGESHADER -4
+	#define VECTORSHAPETYPE 0
+	#define VECTORCIRCLETYPE 1
+	#define VECTORTEXTIMAGETYPE 2
+	#define PRESSEDTEXTURESHADERTYPE 100
 	rectangle createRectangle(int x, int y, int width, int height);
 	std::vector<GLfloat> generateCircleVerticies(int cx, int cy, int r, int numSegments);
 	color createColor(int r, int g, int b, int a);
 
 	//zorder list
-	std::vector<order> graphicsList;
+	std::vector<order> zorderList;
 	
 	//for key down texture switching
-	std::vector<int> modShiftKeys;
-	std::vector<int> modCtrlKeys;
-	std::vector<int> modAltKeys;
-	std::vector<int> modUIKeys;
-	std::vector<int> modFnKeys;
-	std::vector<int> modCapKeys;
 	bool shiftHeld = false;
 	bool ctrlHeld = false;
 	bool altHeld = false;
-	bool metaHeld = false;
 	bool fnHeld = false;
-	bool capsHeld = false;
 	bool capsOn = false;
+	int setHeldType(int keyID);	//returns the heldType for the order struct, checks all keys to determine if key has multiple textures for held type
+	bool isALetterKey(int keyID);
 
 	//list of solid color shapes:
 	std::vector<GLuint> vectorShapeGLuint;
@@ -207,14 +181,15 @@ private:
 	//shader programs:
 	float startSDLTime;
 	shader_h* shader;
+	GLuint getCurrentTextureShaderProgram();
 	GLuint loadShaderProgram(const char* vertexShaderFilename, const char* fragmentShaderFilename);
 	GLuint textureShaderProgram;
 	GLuint colorShaderProgram;
 	GLuint textShaderProgram;
 	//custom shader list:
 	std::vector<GLuint> customShaderPrograms;
-	int textureShaderDefault = -1;
-	int texturePressShaderDefault = -1;
+	int indexOfPressTextureShader = -1;
+	int indexOfTextureShader = -1;
 	
 	//text
 	std::vector<text*> listOfText;

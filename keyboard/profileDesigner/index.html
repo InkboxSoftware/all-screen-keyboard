@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-16"/>
+		<link rel="icon" href="icon.png"></link>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>ASK Online Designer</title>
+	</head>
+	<script src="jscolor.js"></script>
+	<script src="jszip.min.js"></script>
+	<body>
+
+		<!-- Toolbar -->
+		<div class="toolbar">
+			<input type="file" id="zipInput" accept=".zip, */*" style="display: none;"/>
+			<button onclick="importProfile()" class="coolButton">Import Profile</button> 
+			<div class="dropdown">
+				<button class="coolButton dropbtn">New Leftside Keyboard ▼</button>
+				<div class="dropdown-content">
+					<button onclick="newKeyboardANSI(true)" class="coolButton">New ANSI</button>
+					<button onclick="newKeyboardISO(true)" class="coolButton">New ISO</button>
+				</div>
+			</div>
+			<div class="dropdown">
+				<button class="coolButton dropbtn">Add Rightside Keyboard ▼</button>
+				<div class="dropdown-content">
+					<button onclick="addMacroPad()" class="coolButton">Add Macro Pad</button>
+					<button onclick="addBigPad()" class="coolButton">Add Large Macros</button>
+				</div>
+			</div>
+			<button class="coolButton" id="massImageButton">Import Images</button>
+			<input type="file" id="massImageInput" multiple accept="image/*" style="display: none;">
+			<button class="coolButton" id="massFontButton">Import Fonts</button>
+			<input type="file" id="massFontInput" multiple accept=".ttf,.otf,.woff,.woff2,*/*" style="display: none;">
+			<button class="coolButton" id="massShaderButton">Import Shaders</button>
+			<input type="file" id="massShaderInput" multiple accept=".vert,.frag,*/*" style="display: none;">
+			<button class="coolButton" id="massPluginButton">Import Plugins</button>
+			<input type="file" id="massPluginInput" multiple accept=".so,*/*" style="display: none;">
+			<button onclick="exportProfile()"  class="coolButton">Export Profile</button>
+		</div>
+
+		<!-- Bottom split layout -->
+		<div class="bottom">
+		<div class="canvas-container">
+			<div class="topContainer">
+				<div class="centerElements">		
+					<canvas id="myCanvas" width="400" height="300"></canvas>
+					<button onclick="renderKeys()" style="margin-top:20px;">Refresh Preview</button>		
+				</div>	
+			</div>
+		
+			<div class="tabContainer">
+				<div class="tabs tabRow">
+					<p>Libraries</p>
+					<button id="imageLibButton" class="tabs coolButton" onclick="showTab(0)">Images</button>
+					<button id="fontsLibButton"class="tabs coolButton" onclick="showTab(1)">Fonts</button>
+					<button id="shaderLibButton"class="tabs coolButton" onclick="showTab(2)">Shaders</button>
+					<button id="pluginLibButton"class="tabs coolButton" onclick="showTab(3)">Plugins</button>
+				</div>
+				
+				<div class="tabContent">
+					<div class="tab-page">
+						<!--Image Tab Content-->
+						<div id="imageLibrary" class="imageLibrary">
+							<h1 style="margin-left: 2%;">Image Library</h1>
+						</div>
+					</div>
+					<div class="tab-page">
+						<!--Font Tab Content-->
+						<div id="fontLibrary" class="fontLibrary">
+							<h1 style="margin-left: 2%;">Font Library</h1>
+						</div>
+					</div>
+					<div class="tab-page">
+						<!--Shader Tab Content-->
+						<div id="shaderLibrary" class="fontLibrary">
+							<h1 style="margin-left: 2%;">Shader Library</h1>
+						</div>
+					</div>
+					<div class="tab-page">
+						<!--Shader Tab Content-->
+						<div id="pluginLibrary" class="fontLibrary">
+							<h1 style="margin-left: 2%;">Plugin Library</h1>
+						</div>
+					</div>
+				</div>
+			
+			</div>
+		</div>
+		
+		
+		<div class="sidebar">
+		<div class="globalElements" id="globalElements">
+			<div class="doubleElementRow">			
+				<p class="paramLabel">Layout Profile:</p>
+				<input id="profileNameInput" type="text" class="paramInput" placeholder="myLayout"/>
+			</div>
+			<div class="doubleElementRow">			
+				<p class="paramLabel">Global X Offset:</p>
+				<input id="globalXInput" type="text" class="paramInput" placeholder="0"/>
+			</div>
+			<div class="doubleElementRow">			
+				<p class="paramLabel">Global Y Offset:</p>
+				<input id="globalYInput" type="text" class="paramInput" placeholder="0"/>
+			</div>
+			<div class="doubleElementRow">			
+				<p class="paramLabel">BG Color</p>
+				<input id="bgColorInput" class="paramInput" style="width: 50%;" data-jscolor="{format: 'rgba'}"/>
+			</div>
+			<div class="doubleElementRow">				
+				<p class="paramLabel">&nbsp;&nbsp;&nbsp;&nbsp;Video</p>
+				<label class="toggle-switch">
+					<input id="useVideoInput" type="checkbox" disabled/>
+					<span class="slider"></span>
+				</label>		
+				<p class="paramLabel">Image</p>
+			</div>
+			<div class="doubleElementRow">			
+				<p class="paramLabel">Background Src:</p>
+				<input id="globalBGSrcInput" type="text" class="paramInput"/>
+			</div>	
+			<p class="paramLabel">Global Key Shaders:</p>
+			<div class="doubleElementRow">			
+				<p class="paramLabel">Shader:</p>
+				<select id="shaderPickerGlobal" name="shaderPickerGlobal">
+					<option value="default">Default</option>
+				</select>
+			</div>
+			<div class="doubleElementRow closer">			
+				<p class="paramLabel">Press Shader:</p>
+				<select id="pressShaderPickerGlobal" name="pressShaderPickerGlobal">
+					<option value="default">Default</option>
+				</select>
+			</div>
+			
+			<div class="endButton">
+				<button onclick="closeGlobalParameters()" class="coolButton">Close</button>
+			</div>
+		</div>
+		<div  class="keyElements" id="keyElements">
+			<div class="doubleElementRow">			
+				<p class="paramLabel" id="keyIDp">ID: </p>
+			</div>
+			<div class="doubleElementRow">			
+				<p class="paramLabel">Z</p>
+				<input id="zInput" type="text" class="paramInput" placeholder="0"/>
+			</div>
+			<div class="doubleElementRow closer">			
+				<p class="paramLabel">X</p>
+				<input id="xInput" type="text" class="paramInput" placeholder="0"/>
+				<p class="paramLabel">Y</p>
+				<input id="yInput" type="text" class="paramInput" placeholder="0"/>
+			</div>
+			<div class="doubleElementRow closer">			
+				<p class="paramLabel">W</p>
+				<input id="wInput" type="text" class="paramInput" placeholder="0"/>
+				<p class="paramLabel">H</p>
+				<input id="hInput" type="text" class="paramInput" placeholder="0"/>
+			</div>
+			<div class="doubleElementRow">			
+				<p class="paramLabel">Color</p>
+				<input id="colorInput" class="paramInput" style="width: 50%;" data-jscolor="{format: 'rgba'}"/>
+			</div>
+			<div class="doubleElementRow closer">			
+				<p class="paramLabel">Rectangle</p>
+				<label class="toggle-switch">
+					<input id="isNotRectInput" type="checkbox"/>
+					<span class="slider"></span>
+				</label>		
+				<p class="paramLabel">Texture</p>
+			</div>
+			<div class="doubleElementRow closer">			
+				<p class="paramLabel">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Text</p>
+				<label class="toggle-switch">
+					<input id="useImageInput" type="checkbox" disabled/>
+					<span class="slider"></span>
+				</label>		
+				<p class="paramLabel">Image</p>
+			</div>
+			<div class="doubleElementRow closer2">			
+				<label for="fontPicker" class="paramLabel">Font:</label>
+				<select id="fontPicker" name="fontPicker" disabled>
+					<option value="default">Default</option>
+				</select>
+			</div>
+			<div class="doubleElementRow closer2">			
+				<p class="paramLabel" id="keyText">Label</p>
+				<input id="textInput" type="text" class="paramInput" placeholder="A" disabled/>
+			</div>
+			<div class="doubleElementRow">			
+				<label for="outputPicker" class="paramLabel">Output Type:</label>
+				<select id="outputPicker" name="outputPicker">
+					<option value="HID">HID Keycode</option>
+					<option value="Unicode">Unicode</option>
+					<option value="ProfSwap">Profile Swap</option>
+				</select>
+			</div>
+			<div class="doubleElementRow closer2">			
+				<p class="paramLabel" id="outputValue">Output Value</p>
+				<input id="outputValueInput" type="text" class="paramInput" list="HIDcodes"/>
+				<datalist id="HIDcodes">
+				</datalist>
+			</div>
+			<div class="doubleElementRow closer">			
+				<p class="paramLabel">Affected By Caps Lock</p>
+				<label class="toggle-switch">
+					<input id="affectedByCapsLock" type="checkbox"/>
+					<span class="slider"></span>
+				</label>		
+			</div>
+			<div class="doubleElementRow">			
+				<p class="paramLabel">Shader:</p>
+				<select id="shaderPicker" name="shaderPicker">
+					<option value="default">Default</option>
+				</select>
+			</div>
+			<div class="doubleElementRow closer">			
+				<p class="paramLabel">Press Shader:</p>
+				<select id="pressShaderPicker" name="pressShaderPicker">
+					<option value="default">Default</option>
+				</select>
+			</div>
+			<div class="doubleElementRow">			
+				<label for="pluginPicker" class="paramLabel">Key Press Plugin Event:</label>
+				<select id="pluginPicker" name="pluginPicker">
+					<option value="default">None</option>
+				</select>
+			</div>
+			<br>
+			
+			<div class="doubleElementRow">
+				<div class="modBlock">
+					<details>
+					<summary class="paramLabel">Modifier Key Output</summary>
+						<div class="doubleElementRow">
+							<p class="paramLabel closer2" style="font-weight: normal;">+Shift</p>
+							<select id="modTypeShift" name="modTypeShift" style="margin-right: 10px;">
+								<option value="HID">HID Keycode</option>
+								<option value="Unicode">Unicode</option>
+								<option value="ProfSwap">Profile Swap</option>
+							</select>
+							<input id="modValueShift" type="text" class="paramInput" list="HIDcodes1"/>
+							<datalist id="HIDcodes1">
+							</datalist>
+						</div>
+						<div class="doubleElementRow closer2">
+							<p class="paramLabel closer2" style="font-weight: normal;">+Ctrl&nbsp;</p>
+							<select id="modTypeCtrl" name="modTypeCtrl" style="margin-right: 10px;">
+								<option value="HID">HID Keycode</option>
+								<option value="Unicode">Unicode</option>
+								<option value="ProfSwap">Profile Swap</option>
+							</select>
+							<input id="modValueCtrl" type="text" class="paramInput" list="HIDcodes2"/>
+							<datalist id="HIDcodes2">
+							</datalist>
+						</div>
+						<div class="doubleElementRow closer2">
+							<p class="paramLabel closer2" style="font-weight: normal;">+UI&nbsp;&nbsp;&nbsp;</p>
+							<select id="modTypeUI" name="modTypeUI" style="margin-right: 10px;">
+								<option value="HID">HID Keycode</option>
+								<option value="Unicode">Unicode</option>
+								<option value="ProfSwap">Profile Swap</option>
+							</select>
+							<input id="modValueUI" type="text" class="paramInput" list="HIDcodes3"/>
+							<datalist id="HIDcodes3">
+							</datalist>
+						</div>
+						<div class="doubleElementRow closer2">
+							<p class="paramLabel closer2" style="font-weight: normal;">+Alt&nbsp;&nbsp;</p>
+							<select id="modTypeAlt" name="modTypeAlt" style="margin-right: 10px;">
+								<option value="HID">HID Keycode</option>
+								<option value="Unicode">Unicode</option>
+								<option value="ProfSwap">Profile Swap</option>
+							</select>
+							<input id="modValueAlt" type="text" class="paramInput" list="HIDcodes4"/>
+							<datalist id="HIDcodes4">
+							</datalist>
+						</div>
+						<div class="doubleElementRow closer2">
+							<p class="paramLabel closer2" style="font-weight: normal;">+Fn&nbsp;&nbsp;&nbsp;</p>
+							<select id="modTypeFn" name="modTypeFn" style="margin-right: 10px;">
+								<option value="HID">HID Keycode</option>
+								<option value="Unicode">Unicode</option>
+								<option value="ProfSwap">Profile Swap</option>
+							</select>
+							<input id="modValueFn" type="text" class="paramInput" list="HIDcodes5"/>
+							<datalist id="HIDcodes5">
+							</datalist>
+						</div>
+					</details>
+				</div>
+			</div>
+			<div class="doubleElementRow">			
+				<div class="modBlock">
+					<details>
+					<summary class="paramLabel" id="modKeyTextLabel">Modifier Key Texture</summary>
+						<div class="doubleElementRow">
+							<p class="paramLabel closer2" style="font-weight: normal;">&emsp; +Shift</p>
+							<input id="modTextShift" type="text" class="paramInput"/>
+						</div>
+						<div class="doubleElementRow closer2">
+							<p class="paramLabel closer2" style="font-weight: normal;">&emsp; +Ctrl&nbsp;</p>
+							<input id="modTextCtrl" type="text" class="paramInput"/>
+						</div>
+						<div class="doubleElementRow closer2">
+							<p class="paramLabel closer2" style="font-weight: normal;">&emsp; +UI&nbsp;&nbsp;&nbsp;</p>
+							<input id="modTextUI" type="text" class="paramInput"/>
+						</div>
+						<div class="doubleElementRow closer2">
+							<p class="paramLabel closer2" style="font-weight: normal;">&emsp; +Alt&nbsp;&nbsp;</p>
+							<input id="modTextAlt" type="text" class="paramInput"/>
+						</div>
+						<div class="doubleElementRow closer2">
+							<p class="paramLabel closer2" style="font-weight: normal;">&emsp; +Fn&nbsp;&nbsp;&nbsp;</p>
+							<input id="modTextFn" type="text" class="paramInput"/>
+						</div>
+					</details>
+				</div>
+			</div>
+			<div class="doubleElementRow">			
+				<div class="modBlock">
+					<details>
+					<summary class="paramLabel">Modifier Key Shaders</summary>
+						<div class="doubleElementRow">
+							<p class="paramLabel closer2" style="font-weight: normal;">&emsp; +Shift</p>
+							<select id="modShaderShift" name="modShaderShift">
+								<option value="default">Default</option>
+							</select>
+						</div>
+						<div class="doubleElementRow closer2">
+							<p class="paramLabel closer2" style="font-weight: normal;">&emsp; +Ctrl&nbsp;</p>
+							<select id="modShaderCtrl" name="modShaderCtrl">
+								<option value="default">Default</option>
+							</select>
+						</div>
+						<div class="doubleElementRow closer2">
+							<p class="paramLabel closer2" style="font-weight: normal;">&emsp; +UI&nbsp;&nbsp;&nbsp;</p>
+							<select id="modShaderUI" name="modShaderUI">
+								<option value="default">Default</option>
+							</select>
+						</div>
+						<div class="doubleElementRow closer2">
+							<p class="paramLabel closer2" style="font-weight: normal;">&emsp; +Alt&nbsp;&nbsp;</p>
+							<select id="modShaderAlt" name="modShaderAlt">
+								<option value="default">Default</option>
+							</select>
+						</div>
+						<div class="doubleElementRow closer2">
+							<p class="paramLabel closer2" style="font-weight: normal;">&emsp; +Fn&nbsp;&nbsp;&nbsp;</p>
+							<select id="modShaderFn" name="modShaderFn">
+								<option value="default">Default</option>
+							</select>
+						</div>
+					</details>
+				</div>
+			</div>
+			<br>
+			<div class="endButton">
+				<button onclick="closeKey()" class="coolButton">Close</button>
+			</div>
+		</div>
+		</div>
+		</div>
+		
+
+	</body>
+
+	<style>
+		body {
+			margin: 0;
+			font-family: monospace;
+			display: flex;
+			flex-direction: column;
+			height: 100vh;
+		}
+		button {
+			font-family: monospace;
+		}
+
+		.keyElements {
+			display: none;
+			width: 100%;
+			height: 100%;
+		}
+		
+		.globalElements{
+			display: none;
+			width: 100%;
+			height: 100%;
+		}
+
+		.toolbar {
+			background-color: #333;
+			padding: 10px;
+			display: flex;
+			width: 100%;
+			gap: 10px;
+		}
+
+		.coolButton {
+			color: white;
+			background-color: #555;
+			border: none;
+			padding: 8px 12px;
+			cursor: pointer;
+		}
+
+		.coolButton:hover {
+			background-color: #777;
+		}
+
+		.paramLabel {
+			font-weight: bold;
+			font-size: 16px;
+			padding-right: 10px;
+			padding-left: 20px;
+		}
+
+		.paramInput{
+			width: 35%;
+			font-size: 16px;
+			line-height: 1; 
+			padding: 0;
+			box-sizing: border-box;
+		}
+		
+		.doubleElementRow{
+			width: 100%;
+			line-height: 1.2;
+			display: flex;
+			padding: 0;
+			align-items: baseline;
+		}
+		
+		.closer{
+			margin-top: -20px;
+		}
+		.closer2{
+			margin-top: -10px;
+		}
+
+		/* Bottom layout */
+		.bottom {
+			flex: 1;
+			display: flex;
+		}
+		.canvas-container {
+			flex: 2;
+			background-color: #f0f0f0;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			flex-direction: column;
+		}
+
+		.topContainer {
+			height: 60%;
+		}
+		.centerElements {
+			width: 100%;
+			height: 100%;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			flex-direction: column;
+		}
+
+		canvas {
+			border: 3px solid black;
+		}
+		
+		.endButton {
+			width: 100%;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+		}
+
+		.sidebar {
+			flex: 1;
+			background-color: #e0e0e0;
+			padding: 5px;
+			overflow-y: auto;
+			margin:4px 0;
+			line-height: 1.2;
+			height: 103%;
+		}
+		
+		.dropdown {
+			position: relative;
+			display: inline-block;
+		}
+		.dropbtn {
+			background-color: #555;
+			color: white;
+			padding: 8px 12px;
+			border: none;
+			cursor: pointer;
+		}
+		.dropdown-content {
+			display: none;
+			position: absolute;
+			background-color: #f9f9f9;
+			width: 100%;
+			box-shadow: 0px 8px 16px rgba(0,0,0,0.2);
+			z-index: 1;
+		}
+		
+		.dropdown-content button {
+			color: white;
+			padding: 8px 12px;
+			text-decoration: none;
+			display: block;
+			width: 100%;
+		}
+		.dropdown-content button:hover {
+			background-color: #999;
+		}
+		.dropdown:hover .dropdown-content {
+			display: block;
+		}		
+		.dropdown:hover .dropbtn {
+			background-color: #777;
+		}
+		
+		.toggle-switch {
+			position: relative;
+			display: inline-block;
+			width: 64px;
+			height: auto;
+			background-color: #CCC;
+			border: 2px solid #000;
+		}
+		
+		.toggle-switch:has(input:disabled){
+			background-color: #999;
+			cursor: not-allowed;
+			opacity: 0.6;
+			pointer-events: none;
+		}
+		.doubleElementRow:has(input:disabled){
+			opacity: 0.6;
+		}
+		.doubleElementRow:has(select:disabled){
+			opacity: 0.6;
+		}
+		.toggle-switch input:disabled + slider{
+			background-color: #666;
+		}
+		
+		.toggle-switch input {
+			opacity: 0;
+			width: 0;
+			height: 0;
+		}
+		
+		.slider {
+			position: absolute;
+			top: 2px;
+			left: 2px;
+			width: 26px;
+			height: 8px;
+			background-color: #01d4fe;
+			border: 2px solid #000;
+			transition: 0.3s;
+		}
+		
+		.toggle-switch input:checked + .slider {
+			transform: translateX(30px);
+			background-color: #0F0;
+		}
+		
+		.layoutP {
+			font-size: 32px;
+			padding-right: 20px;
+		}
+		
+		.layoutInput {
+			font-size: 32px;
+		}
+		
+		.tabContainer{
+			background-color:#BBB;
+			height: 38vh;
+			width: 100%;
+		}
+		.tabContent{
+			width: 100%;
+			height: 100%;
+			overflow-y: scroll;
+			overflow-x: hidden;
+			background-color: #BBB;
+		}
+		.tabRow {
+			background-color: #333;
+			padding: 5px;
+			display: flex;
+			gap: 10px;
+			line-height: 0.15;
+		}
+		.tab-page {
+			display: none;
+		}
+		.tab-page.active{
+			display: block;
+		}
+		
+		.tabRow p {
+			font-size: 14px;
+			color: white;
+			font-weight: bold;
+		}
+		
+		.modBlock {
+			display:inline-block; 
+			margin: 0px;
+			padding: 0px;
+		}
+		
+		.imageLibrary {
+			padding: 1.5%
+			height: auto;
+			font-size: 20px;
+			line-height: 1;
+		}
+		
+		.imageLibrary img {
+			border: 1px solid black;
+			margin: 0.15%;
+			width: 6.95%;
+			user-select: none;
+		}
+		
+		.imageLibrary img:hover {
+			background-color: rgba(0, 230, 255, 0.3);
+		}
+		
+		.imageLibrary img:active {
+			outline: 2px solid red;
+			outline-offset: 1px;
+		}
+		
+		.fontLibrary {
+			font-size: 20px;
+			line-height: 1;
+		}
+		
+		.fontLibrary p {
+			font-size: 20px;
+			padding-left: 36px;
+			user-select: none;
+			margin-top: -15px;
+		}
+		
+		.fontLibrary p:hover {
+			background-color: rgba(0, 230, 255, 0.3);
+		}
+		
+		.highlightHover {
+			user-select: none;
+		}
+		.highlightHover:hover {
+			background-color: rgba(0, 230, 255, 0.3);
+		}
+		
+	</style>
+	
+	<script src="program.js"></script>
+</html>

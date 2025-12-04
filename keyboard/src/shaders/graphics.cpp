@@ -1,3 +1,4 @@
+//custom libraries
 #include "graphics.h"
 
 using namespace std;
@@ -222,7 +223,18 @@ int window::initialize(int windowWidth, int windowHeight, bool fullScreen){
 	return 0;
 }
 
-int window::runWindow(std::vector<key*> keys){
+GLuint window::getCurrentTextureShaderProgram(){
+	switch (indexOfTextureShader){
+		case -1:
+			return textureShaderProgram;
+		default:
+			return customShaderPrograms[indexOfTextureShader];
+	}
+	//should never get here, but just in case:
+	return textureShaderProgram;	
+}
+
+int window::runWindow(bool* pressedKeys){
 	//running
 	bool running = true;
 	SDL_Event event;
@@ -239,76 +251,14 @@ int window::runWindow(std::vector<key*> keys){
 	Uint32 elapsedVideo = SDL_GetTicks();
 	Uint32 lastTimeVideo = SDL_GetTicks();
 	
-	int lastCaps = false;//pressedKeys[3];
+	int lastCaps = pressedKeys[3];
 	startSDLTime = SDL_GetTicks() / 1000.0f;
 	
 	while (running){
-		shiftHeld = false;
-		ctrlHeld = false;
-		altHeld = false;
-		metaHeld = false;
-		fnHeld = false;
-		capsHeld = false;
 		while (SDL_PollEvent(&event)){
 			//printf("EVENT: %d\n", event.type);
-			switch (event.type){
-				case SDL_KEYDOWN:
-					if (event.key.keysym.sym != SDLK_ESCAPE)
-					break;
-				case SDL_QUIT:
-					running = false;
-					break;
-				case SDL_FINGERDOWN:
-					while (accessInputMUX.load(memory_order_acquire) > 0)
-						__asm__("nop");		//idle until access is available
-					accessInputMUX.fetch_add(1, memory_order_acq_rel);		//obtain access
-					eventsToProcess.fetch_add(1, memory_order_acq_rel);		//increase events
-					touchIOqueue.push_back({ event.tfinger.x, event.tfinger.y, true });
-					accessInputMUX.fetch_sub(1, memory_order_acq_rel);		//release access
-					break;
-				case SDL_FINGERUP:				
-					while (accessInputMUX.load(memory_order_acquire) > 0)
-						__asm__("nop");		//idle until access is available
-					accessInputMUX.fetch_add(1, memory_order_acq_rel);		//obtain access
-					eventsToProcess.fetch_add(1, memory_order_acq_rel);		//increase events
-					touchIOqueue.push_back({ event.tfinger.x, event.tfinger.y, false });
-					accessInputMUX.fetch_sub(1, memory_order_acq_rel);		//release access
-					break;
-				case SDL_MOUSEBUTTONDOWN:
-					while (accessInputMUX.load(memory_order_acquire) > 0)
-						__asm__("nop");		//idle until access is available
-					accessInputMUX.fetch_add(1, memory_order_acq_rel);		//obtain access
-					eventsToProcess.fetch_add(1, memory_order_acq_rel);		//increase events
-					touchIOqueue.push_back({ static_cast<float>(event.button.x) / 3840.0f, 
-						static_cast<float>(event.button.y) / 1100.0f, true });
-					accessInputMUX.fetch_sub(1, memory_order_acq_rel);		//release access
-					break;
-				case SDL_MOUSEBUTTONUP:				
-					while (accessInputMUX.load(memory_order_acquire) > 0)
-						__asm__("nop");		//idle until access is available
-					accessInputMUX.fetch_add(1, memory_order_acq_rel);		//obtain access
-					eventsToProcess.fetch_add(1, memory_order_acq_rel);		//increase events
-					touchIOqueue.push_back({ static_cast<float>(event.button.x) / 3840.0f, 
-						static_cast<float>(event.button.y) / 1100.0f, false });
-					accessInputMUX.fetch_sub(1, memory_order_acq_rel);		//release access
-					break;
-					
-				default:
-					break;
-			}		
-		}
-
-		//check if time to next frame has passed
-		currentTime = SDL_GetTicks();
-		elapsed = currentTime - lastTime;
-		if (elapsed >= 16){
-			//write elapsed time:
-			float frameRate = 1.0f / (static_cast<float>(elapsed) / 1000.0f);
-			listOfText[0]->updateText(to_string(frameRate).c_str());
-			lastTime = currentTime;
-		}
-		else{
-			continue;	//loop back to begining
+			if (event.type == SDL_QUIT || (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_ESCAPE))
+				running = false;
 		}
 
 		//do not run if clearing VRAM:
@@ -319,12 +269,12 @@ int window::runWindow(std::vector<key*> keys){
 			}
 			if (needCustomShader){
 				cout << vertexShaderFileNameREQ << "," << fragmentShaderFilenameREQ << endl;
-				asyncOutputValue = loadCustomShaderProgram(vertexShaderFileNameREQ, fragmentShaderFilenameREQ);
+				asyncOutputValue = loadCustomShaderProgram(vertexShaderFileNameREQ, fragmentShaderFilenameREQ, typeREQ);
 				needCustomShader = false; 			
 				asyncToDo = false;
 			}
 			else if (needDrawRect){
-				asyncOutputValue = drawRect(zREQ, xREQ, yREQ, widthREQ, heightREQ, rREQ, gREQ, bREQ, aREQ, keyIDREQ, customShaderREQ);
+				asyncOutputValue = drawRect(xREQ, yREQ, widthREQ, heightREQ, rREQ, gREQ, bREQ, aREQ, keyIDREQ);
 				needDrawRect = false;			
 				asyncToDo = false;
 			}
@@ -334,18 +284,18 @@ int window::runWindow(std::vector<key*> keys){
 				asyncToDo = false;
 			}
 			else if (needDrawCircle){
-				asyncOutputValue = drawCircle(zREQ, centerXREQ, centerYREQ, radiusREQ, segmentsREQ, rREQ, gREQ, bREQ, aREQ, keyIDREQ, customShaderREQ);
+				asyncOutputValue = drawCircle(centerXREQ, centerYREQ, radiusREQ, segmentsREQ, rREQ, gREQ, bREQ, aREQ, keyIDREQ);
 				needDrawCircle = false;			
 				asyncToDo = false;
 			}
 			else if (needDrawText){
-				asyncOutputValue = drawText(textREQ, zREQ, xREQ, yREQ, widthREQ, heightREQ, rREQ, gREQ, bREQ, aREQ, keyIDREQ, modifierREQ, customShaderREQ);
+				asyncOutputValue = drawText(textREQ, xREQ, yREQ, widthREQ, heightREQ, rREQ, gREQ, bREQ, aREQ, keyIDREQ);
 				needDrawText = false;			
 				asyncToDo = false;
 			}
 			else if (needDrawImage){
 				cout << srcREQ << endl;	//I have no idea why, but if I leave this out, some textures aren't rendered properly, may be a timing issue
-				asyncOutputValue = drawImage(srcREQ, zREQ, xREQ, yREQ, widthREQ, heightREQ, aREQ, keyIDREQ, modifierREQ, customShaderREQ);
+				asyncOutputValue = drawImage(srcREQ, xREQ, yREQ, widthREQ, heightREQ, aREQ, keyIDREQ);
 				needDrawImage = false;			
 				asyncToDo = false;
 			}
@@ -357,47 +307,14 @@ int window::runWindow(std::vector<key*> keys){
 		currentlyRendering = true;
 
 		//check key pressed values		
-		if (modShiftKeys.size() > 0){
-			for (int i = 0; i < modShiftKeys.size(); i++){
-				shiftHeld |= keys[modShiftKeys[i]]->pressed;
-			}
-		}
-		//else { shiftHeld = false; }
-		if (modCtrlKeys.size() > 0){
-			for (int i = 0; i < modCtrlKeys.size(); i++){
-				ctrlHeld |= keys[modCtrlKeys[i]]->pressed;
-			}
-		}
-		//else { ctrlHeld = false; }
-		if (modAltKeys.size() > 0){
-			for (int i = 0; i < modAltKeys.size(); i++){
-				altHeld |= keys[modAltKeys[i]]->pressed;
-			}
-		}
-		//else { altHeld = false; }
-		if (modUIKeys.size() > 0){
-			for (int i = 0; i < modUIKeys.size(); i++){
-				metaHeld |= keys[modUIKeys[i]]->pressed;
-			}
-		}
-		//else { metaHeld = false; }
-		if (modFnKeys.size() > 0){
-			for (int i = 0; i < modFnKeys.size(); i++){
-				fnHeld |= keys[modFnKeys[i]]->pressed;
-			}
-		}
-		//else { fnHeld = false; }
-		if (modCapKeys.size() > 0){
-			for (int i = 0; i < modCapKeys.size(); i++){
-				capsHeld |= keys[modCapKeys[i]]->pressed;
-			}
-		}
-		//else { capsHeld = false; }
-		
-		
-		if (lastCaps != capsHeld && !lastCaps && capsHeld){
+		if (lastCaps != pressedKeys[3] && !lastCaps && pressedKeys[3]){
 			capsOn = !capsOn;
 		}
+		shiftHeld = pressedKeys[4] | pressedKeys[75];
+		ctrlHeld = pressedKeys[5] | pressedKeys[79];
+		altHeld = pressedKeys[7] | pressedKeys[76];
+		fnHeld = pressedKeys[78];
+		lastCaps = pressedKeys[3];
 
 		//clear window with color
 		glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
@@ -420,176 +337,80 @@ int window::runWindow(std::vector<key*> keys){
 			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 		}
 
-		//update time in custom shader programs
-		for (int k = 0; k < customShaderPrograms.size(); k++){
-			glUseProgram(customShaderPrograms[k]);
+
+		glUseProgram(getCurrentTextureShaderProgram());
+		if (indexOfTextureShader >= 0){
 			float currentTime = (SDL_GetTicks() / 1000.0f) - startSDLTime;
-			glUniform1f(glGetUniformLocation(customShaderPrograms[k], "time"), currentTime);	
+			glUniform1f(glGetUniformLocation(getCurrentTextureShaderProgram(), "time"), currentTime);	
 		}
-		
-		glUseProgram(textureShaderProgram);
-		int lastCalledShaderProgram = DEFAULTTEXTIMAGESHADER;
+		int lastCalledShaderProgram = VECTORTEXTIMAGETYPE;
 		bool draw = false;
 		bool advancedShift;
-		int blockList = 0;
-		bool blocked = false;
-		int modifierLevel = -1;
-		
-		for (int Z = 0; Z < MAXZLEVEL; Z++){
-			for (int i = 0; i < graphicsList.size(); i++){
-				if (graphicsList[i].z != Z) continue;
-				
-				draw = false;
-				blockList = 0;
-				blocked = false;
-				modifierLevel = -1;
-				//check if the object is tied to a key & if it meets the key status of being rendered
-				if (graphicsList[i].keyID >= 0){	//if -1, draw for all
-					//heirarchy of display: fn -> alt -> meta -> ctrl -> shift
-					advancedShift = (keys[graphicsList[i].keyID]->affectedByCapsLock & capsOn) | shiftHeld;
-					if (keys[graphicsList[i].keyID]->affectedByCapsLock && capsOn && shiftHeld)
-						advancedShift = false; 
-					
-					blockList = graphicsList[i].heldTypeModifier >> 16;	//list of blocked keys
-					
-					if (fnHeld && (graphicsList[i].heldTypeModifier & FORFNTEXTURE)){
-						if (graphicsList[i].heldTypeModifier >= 0) draw = true;
-						modifierLevel = 4;
-					} else if (fnHeld && (blockList & FORFNTEXTURE)){ blocked = true; }
-					
-					if (altHeld && (graphicsList[i].heldTypeModifier & FORALTTEXTURE)){
-						if (graphicsList[i].heldTypeModifier >= 0) draw = true;
-						modifierLevel = 3;
-					} else if (!draw && altHeld && (blockList & FORALTTEXTURE)){ blocked = true; }
-					
-					if (metaHeld && (graphicsList[i].heldTypeModifier & FORMETATEXTURE)){
-						if (graphicsList[i].heldTypeModifier >= 0) draw = true;
-						modifierLevel = 2;
-					} else if (!draw && metaHeld && (blockList & FORMETATEXTURE)){ blocked = true; }
-					
-					if (ctrlHeld && (graphicsList[i].heldTypeModifier & FORCTRLTEXTURE)){
-						if (graphicsList[i].heldTypeModifier >= 0) draw = true;
-						modifierLevel = 1;
-					} else if (!draw && ctrlHeld && (blockList & FORCTRLTEXTURE)){ blocked = true; }
-					
-					if (advancedShift && (graphicsList[i].heldTypeModifier & FORSHIFTTEXTURE)){
-						if (graphicsList[i].heldTypeModifier >= 0) draw = true;
-						modifierLevel = 0;
-					} else if (!draw && advancedShift && (blockList & FORSHIFTTEXTURE)){ blocked = true; }
-					
-					if (!blocked && (!fnHeld && !altHeld && !ctrlHeld && !advancedShift && !metaHeld) && (graphicsList[i].heldTypeModifier & FORNORMALTEXTURE)){
-						if (graphicsList[i].heldTypeModifier >= 0) draw = true;
-					}
-					//however, if normal & something in the blocking list is on, then don't turn on
-					if (draw && (graphicsList[i].heldTypeModifier & FORNORMALTEXTURE)){
-						blockList = graphicsList[i].heldTypeModifier ^ 0x1FF;
-						if ((fnHeld && (blockList & FORFNTEXTURE)) || 
-						 (metaHeld && (blockList & FORMETATEXTURE)) || 
-						 (altHeld && (blockList & FORALTTEXTURE)) || 
-						 (ctrlHeld && (blockList & FORCTRLTEXTURE)) || 
-						 (advancedShift && (blockList & FORSHIFTTEXTURE)) 
-						){
-							if (graphicsList[i].heldTypeModifier >= 0) draw = false;
-						}
-					}
-					if (graphicsList[i].heldTypeModifier == -1) draw = true;
-					if (!draw || blocked)
-						continue;
+		bool isLetter;
+		for (int i = 0; i < zorderList.size(); i++){
+			draw = false;
+			//check if the object is tied to a key & if it meets the key status of being rendered
+			if (zorderList[i].keyHeldType >= 0){
+				//heirarchy of display: fn -> alt -> ctrl -> shift -> normal
+				isLetter = isALetterKey(zorderList[i].keyTieID);
+				advancedShift = (isLetter & capsOn) | shiftHeld;
+				if (isLetter && capsOn && shiftHeld)
+					advancedShift = false; 
+				if (fnHeld && (zorderList[i].keyHeldType & FORFNTEXTURE)){
+					draw = true;
 				}
-				
-				switch(graphicsList[i].graphicType){
-					case DEFAULTSHAPESHADER:
-						if (graphicsList[i].customShader >= 0 && lastCalledShaderProgram != graphicsList[i].customShader){
-							glUseProgram(customShaderPrograms[graphicsList[i].customShader]);
-							lastCalledShaderProgram = graphicsList[i].customShader;
-						}
-						else if (graphicsList[i].keyID >= 0 && modifierLevel > 0 &&
-								keys[graphicsList[i].keyID]->modShader[modifierLevel] >= 0 && 
-								lastCalledShaderProgram != keys[graphicsList[i].keyID]->modShader[modifierLevel]){
-							glUseProgram(customShaderPrograms[keys[graphicsList[i].keyID]->modShader[modifierLevel]]);
-							lastCalledShaderProgram = keys[graphicsList[i].keyID]->modShader[modifierLevel];
-						}
-						else if (lastCalledShaderProgram != DEFAULTSHAPESHADER && lastCalledShaderProgram != DEFAULTCIRCLESHADER){
-							glUseProgram(colorShaderProgram);
-							lastCalledShaderProgram = DEFAULTSHAPESHADER;
-						}						
-						glBindVertexArray(vectorShapeGLuint[graphicsList[i].relativeIndex]);
-						glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-						break;
-
-					case DEFAULTCIRCLESHADER:
-						if (graphicsList[i].customShader >= 0 && lastCalledShaderProgram != graphicsList[i].customShader){
-							glUseProgram(customShaderPrograms[graphicsList[i].customShader]);
-							lastCalledShaderProgram = graphicsList[i].customShader;
-						}
-						else if (graphicsList[i].keyID >= 0 && modifierLevel > 0 &&
-								keys[graphicsList[i].keyID]->modShader[modifierLevel] >= 0 && 
-								lastCalledShaderProgram != keys[graphicsList[i].keyID]->modShader[modifierLevel]){
-							glUseProgram(customShaderPrograms[keys[graphicsList[i].keyID]->modShader[modifierLevel]]);
-							lastCalledShaderProgram = keys[graphicsList[i].keyID]->modShader[modifierLevel];
-						}
-						else if (lastCalledShaderProgram != DEFAULTSHAPESHADER && lastCalledShaderProgram != DEFAULTCIRCLESHADER){
-							glUseProgram(colorShaderProgram);	
-							lastCalledShaderProgram = DEFAULTCIRCLESHADER;
-						}
-						glBindVertexArray(vectorCircleuint[graphicsList[i].relativeIndex]);
-						glDrawArrays(GL_TRIANGLE_FAN, 0, vectorCircleSegments[graphicsList[i].relativeIndex]);
-						break;
-
-					case DEFAULTTEXTIMAGESHADER:
-						//pressShaders take precedene over modShaders
-						if (graphicsList[i].keyID >= 0 && keys[graphicsList[i].keyID]->pressed &&
-							keys[graphicsList[i].keyID]->pressShader >= 0 &&
-							lastCalledShaderProgram != keys[graphicsList[i].keyID]->pressShader){	//check keyPressed
-							glUseProgram(customShaderPrograms[keys[graphicsList[i].keyID]->pressShader]);
-							lastCalledShaderProgram = keys[graphicsList[i].keyID]->pressShader;						
-						}
-						else if (graphicsList[i].keyID >= 0 && modifierLevel > 0 &&
-								keys[graphicsList[i].keyID]->modShader[modifierLevel] >= 0 && 
-								lastCalledShaderProgram != keys[graphicsList[i].keyID]->modShader[modifierLevel]){
-							glUseProgram(customShaderPrograms[keys[graphicsList[i].keyID]->modShader[modifierLevel]]);
-							lastCalledShaderProgram = keys[graphicsList[i].keyID]->modShader[modifierLevel];
-						}
-						else if (graphicsList[i].keyID >= 0 && keys[graphicsList[i].keyID]->shader >= 0 &&
-								lastCalledShaderProgram != keys[graphicsList[i].keyID]->shader){
-							glUseProgram(customShaderPrograms[keys[graphicsList[i].keyID]->shader]);
-							lastCalledShaderProgram = keys[graphicsList[i].keyID]->shader;
-						}
-						else if (graphicsList[i].customShader >= 0 && 
-								lastCalledShaderProgram != graphicsList[i].customShader){
-							glUseProgram(customShaderPrograms[graphicsList[i].customShader]);
-							lastCalledShaderProgram = graphicsList[i].customShader;						
-						}
-						//check for global custom shaders
-						else {
-							if (graphicsList[i].keyID >= 0 && keys[graphicsList[i].keyID]->pressed && texturePressShaderDefault >= 0){
-								if (lastCalledShaderProgram != texturePressShaderDefault){
-									glUseProgram(customShaderPrograms[texturePressShaderDefault]);
-									lastCalledShaderProgram = texturePressShaderDefault;	
-								}
-							}
-							else if (textureShaderDefault >= 0 && lastCalledShaderProgram != textureShaderDefault){
-								glUseProgram(customShaderPrograms[textureShaderDefault]);
-								lastCalledShaderProgram = textureShaderDefault;	
-							}
-							else if (textureShaderDefault == -1 && lastCalledShaderProgram != DEFAULTTEXTIMAGESHADER) //load default shader
-							{	
-								glUseProgram(textureShaderProgram);
-								lastCalledShaderProgram = DEFAULTTEXTIMAGESHADER;	
-							}
-						}
-						
-						if (backgroundImageOn && graphicsList[i].relativeIndex == backgroundImgIndex)
-							break;
-						glBindTexture(GL_TEXTURE_2D, vectorTextures[graphicsList[i].relativeIndex]);	//set this texture to be GL_TEXTURE0
-						glBindVertexArray(vectorTextGLuint[graphicsList[i].relativeIndex]);
-						glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-						break;
-
-					default:
-						SDL_Log("Unknown data type found in graphicsList: %d", graphicsList[i].graphicType);
-						break;
+				if (altHeld && (zorderList[i].keyHeldType & FORALTTEXTURE)){
+					draw = true;
 				}
+				if (ctrlHeld && (zorderList[i].keyHeldType & FORCTRLTEXTURE)){
+					draw = true;
+				}
+				if (advancedShift && (zorderList[i].keyHeldType & FORSHIFTTEXTURE)){
+					draw = true;
+				}
+				if ((!fnHeld && !altHeld && !ctrlHeld && !advancedShift) && (zorderList[i].keyHeldType & FORNORMALTEXTURE)){
+					draw = true;
+				}
+				if (!draw)
+					continue;
+			}
+					
+			switch(zorderList[i].listType){
+				case VECTORSHAPETYPE:
+					if (lastCalledShaderProgram != VECTORSHAPETYPE && lastCalledShaderProgram != VECTORCIRCLETYPE)
+						glUseProgram(colorShaderProgram);
+					lastCalledShaderProgram = VECTORSHAPETYPE;
+					glBindVertexArray(vectorShapeGLuint[zorderList[i].relativeIndex]);
+					glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+					break;
+
+				case VECTORCIRCLETYPE:
+					if (lastCalledShaderProgram != VECTORSHAPETYPE && lastCalledShaderProgram != VECTORCIRCLETYPE)
+						glUseProgram(colorShaderProgram);
+					lastCalledShaderProgram = VECTORCIRCLETYPE;
+					glBindVertexArray(vectorCircleuint[zorderList[i].relativeIndex]);
+					glDrawArrays(GL_TRIANGLE_FAN, 0, vectorCircleSegments[zorderList[i].relativeIndex]);
+					break;
+
+				case VECTORTEXTIMAGETYPE:
+					if (pressedKeys[zorderList[i].keyTieID]){	//check keyPressed
+						glUseProgram(customShaderPrograms[indexOfPressTextureShader]);	
+						lastCalledShaderProgram = PRESSEDTEXTURESHADERTYPE;						
+					}
+					else if (lastCalledShaderProgram != VECTORTEXTIMAGETYPE){
+						glUseProgram(getCurrentTextureShaderProgram());	
+						lastCalledShaderProgram = VECTORTEXTIMAGETYPE;
+					}
+					if (backgroundImageOn && zorderList[i].relativeIndex == backgroundImgIndex)
+						break;
+					glBindTexture(GL_TEXTURE_2D, vectorTextures[zorderList[i].relativeIndex]);	//set this texture to be GL_TEXTURE0
+					glBindVertexArray(vectorTextGLuint[zorderList[i].relativeIndex]);
+					glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+					break;
+
+				default:
+					SDL_Log("Unknown data type found in zorderlist: %d", zorderList[i].listType);
+					break;
 			}
 		}
 		//render debugging text on top:
@@ -632,7 +453,21 @@ int window::runWindow(std::vector<key*> keys){
 			//cout << "buffer size: " << videoSurfaceBuffer.size() << endl;
 		}
 		//rendering has finished:
-		currentlyRendering = false;			
+		currentlyRendering = false;
+		
+		bool pass = false;
+		while(!pass){
+			currentTime = SDL_GetTicks();
+			elapsed = currentTime - lastTime;
+			if (elapsed >= 16){
+				//write elapsed time:
+				float frameRate = 1.0f / (static_cast<float>(elapsed) / 1000.0f);
+				listOfText[0]->updateText(to_string(frameRate).c_str());
+				lastTime = currentTime;
+				pass = true;
+			}
+		}
+			
 	}
 	printf("QUIT\n");
 	SDL_GL_DeleteContext(glContext);
@@ -665,13 +500,13 @@ int window::deleteText(text* toRemove){
 	return 0;
 }
 
-int window::drawRect(int z, int x, int y, int width, int height, int r, int g, int b, int a, int keyID, int customShader){
+int window::drawRect(int x, int y, int width, int height, int r, int g, int b, int a, int keyID){
 	rectangle rect = createRectangle(x, y, width, height);
 	color c = createColor(r, g, b, a);
 
 	//create verticies
 		VertexColorSolid verticiesSquare[] = {
-		{{rect.x, rect.y},	{c.r, c.g, c.b, c.a}},
+		{{rect.x, rect.y},	{c.r, c.g, c.b, c.a}},	
 		{{rect.x2, rect.y}, 	{c.r, c.g, c.b, c.a}},	
 		{{rect.x, rect.y2}, 	{c.r, c.g, c.b, c.a}},	
 		{{rect.x2, rect.y2}, 	{c.r, c.g, c.b, c.a}}
@@ -681,14 +516,15 @@ int window::drawRect(int z, int x, int y, int width, int height, int r, int g, i
 		return -1;
 	}	
 	//set order
-	order zorder = { z, DEFAULTSHAPESHADER, static_cast<unsigned int>(vectorShapeGLuint.size()), keyID, -1, customShader };
-	graphicsList.push_back(zorder);
+	int keyIDRaw = keyID & 0xFF;
+	order zorder = { VECTORSHAPETYPE, static_cast<unsigned int>(vectorShapeGLuint.size()), keyIDRaw, setHeldType(keyID) };
+	zorderList.push_back(zorder);
 	//add to shape list
 	vectorShapeGLuint.push_back(squareVAO);
 	return 0;
 }
 
-int window::drawCircle(int z, int centerX, int centerY, int radius, int segments, int r, int g, int b, int a, int keyID, int customShader){
+int window::drawCircle(int centerX, int centerY, int radius, int segments, int r, int g, int b, int a, int keyID){
 	vector<GLfloat> circlePoints = generateCircleVerticies(centerX, centerY, radius, segments);
 	color c = createColor(r, g, b, a);
 
@@ -703,15 +539,16 @@ int window::drawCircle(int z, int centerX, int centerY, int radius, int segments
 		return -1;
 	}	
 	//set order
-	order zorder = { z, DEFAULTCIRCLESHADER, static_cast<unsigned int>(vectorCircleuint.size()), keyID, -1, customShader };
-	graphicsList.push_back(zorder);
+	int keyIDRaw = keyID & 0xFF;
+	order zorder = { VECTORCIRCLETYPE, static_cast<unsigned int>(vectorCircleuint.size()), keyIDRaw, setHeldType(keyID) };
+	zorderList.push_back(zorder);
 	//add to circle list
 	vectorCircleuint.push_back(circleVAO);
 	vectorCircleSegments.push_back(segments+2);
 	return 0;
 }
 
-int window::drawText(const char* text, int z, int x, int y, int width, int height, int r, int g, int b, int a, int keyID, int modifier, int customShader){
+int window::drawText(const char* text, int x, int y, int width, int height, int r, int g, int b, int a, int keyID){
 	rectangle rect = createRectangle(x, y, width, height);
 	color col = createColor(r, g, b, a);
 
@@ -733,14 +570,15 @@ int window::drawText(const char* text, int z, int x, int y, int width, int heigh
 		return -1;
 	}	
 	//set order
-	order zorder = { z, DEFAULTTEXTIMAGESHADER, static_cast<unsigned int>(vectorTextGLuint.size()), keyID, modifier, customShader };
-	graphicsList.push_back(zorder);
+	int keyIDRaw = keyID & 0xFF;
+	order zorder = { VECTORTEXTIMAGETYPE, static_cast<unsigned int>(vectorTextGLuint.size()), keyIDRaw, setHeldType(keyID) };
+	zorderList.push_back(zorder);
 	//add to text list
 	vectorTextGLuint.push_back(squareVAO);
 	return 0;
 }
 
-int window::drawImage(const char* src, int z, int x, int y, int width, int height, int a, int keyID, int modifier, int customShader){
+int window::drawImage(const char* src, int x, int y, int width, int height, int a, int keyID){
 	rectangle rect = createRectangle(x, y, width, height);
 	float alpha = static_cast<float>(a) / 255.0f;
 
@@ -764,11 +602,50 @@ int window::drawImage(const char* src, int z, int x, int y, int width, int heigh
 		return -1;
 	}	
 	//set order
-	order zorder = { z, DEFAULTTEXTIMAGESHADER, static_cast<unsigned int>(vectorTextGLuint.size()), keyID, modifier, customShader };
-	graphicsList.push_back(zorder);
+	int keyIDRaw = keyID & 0xFF;
+	order zorder = { VECTORTEXTIMAGETYPE, static_cast<unsigned int>(vectorTextGLuint.size()), keyIDRaw, setHeldType(keyID) };
+	zorderList.push_back(zorder);
 	//add to image list
 	vectorTextGLuint.push_back(squareVAO);
 	return 0;
+}
+
+int window::setHeldType(int keyID){
+	//the purpose of this function is to check if the key has multiple textures for different key held conditions
+	//i.e.a texture for no keys held, a texture for when shift is held, and so on
+	//if no conditions exist, then the special return code here is -1
+	//otherwise it will set the return number to be the conditions under which it is able to be shown	
+	int multipleHeldTypes = (keyID & 0xFF00);	//if this is over normal key value, it includes a held key condition
+	int keyIDRaw = keyID & 0xFF;
+	for (int i = 0; i < zorderList.size(); i++){
+		if (zorderList[i].keyTieID == keyIDRaw && zorderList[i].keyHeldType > 0  && !(zorderList[i].keyHeldType & FORNORMALTEXTURE)){
+			multipleHeldTypes |= zorderList[i].keyHeldType;
+		}
+	}
+	
+	//check if held key conditions are met
+	if (multipleHeldTypes > 0){
+		//conditions are true, all relevant key held conditions stored in multipleHeldTypes.
+		//each texture tied to the key should have it's keyHeldType adjusted to reflect these changes
+		//keys with held conditions are only shown during when those keys are active
+		//keys without conditions (normal conditions or unassigned) are active during all other condtions
+		int remainingConditions = (FORSHIFTTEXTURE | FORCTRLTEXTURE | FORALTTEXTURE | FORFNTEXTURE);	//all possible conditions
+		remainingConditions ^= multipleHeldTypes;	//get the opposite of whatever conditions are relevant
+		//cout << "remaining Conditions: " << remainingConditions << endl << "all held: " << multipleHeldTypes << endl;
+		remainingConditions |= FORNORMALTEXTURE;	//allow for normal operating conditions
+		for (int i = 0; i < zorderList.size(); i++){
+			if (zorderList[i].keyTieID == keyIDRaw && (zorderList[i].keyHeldType == -1 || zorderList[i].keyHeldType & FORNORMALTEXTURE)){
+				zorderList[i].keyHeldType = remainingConditions;
+			}
+		}
+		//return held condition:
+		if (keyID > 0xFF){
+			return (keyID - keyIDRaw);
+		}
+		return remainingConditions;
+	}
+	
+	return -1;
 }
 
 int window::setbackgroundImage(const char* src){
@@ -878,28 +755,28 @@ GLuint window::loadShaderProgram(const char* vertexShaderFilename, const char* f
 	return shader->shaderProgamLoad(vertexShaderFilename, fragmentShaderFilename);
 }
 
-int window::loadCustomShaderProgram(const char* vertexShaderFilename, const char* fragmentShaderFilename){
-	GLuint newShader = loadShaderProgram(vertexShaderFilename, fragmentShaderFilename);
-	if (newShader == 0){	//did not load correctly
-		cout << "Shader program failed to load" << endl;
+int window::loadCustomShaderProgram(const char* vertexShaderFilename, const char* fragmentShaderFilename, int type){
+	if (type >= TYPE_OTHER_SHADER){
+		SDL_Log("Custom shader load error, Shader type not supported: %d", type);
 		return -1;
 	}
-	customShaderPrograms.push_back(newShader);	
-	return 0;
-}
+	
+	
 
-int window::setCustomGlobalTextureShader(int index){
-	if (index >= 0 && index < customShaderPrograms.size())
-		textureShaderDefault = index;
-	else
-		return -1;
-	return 0;
-}
-int window::setCustomGlobalPressedTextureShader(int index){
-	if (index >= 0 && index < customShaderPrograms.size())
-		texturePressShaderDefault = index;
-	else
-		return -1;
+	customShaderPrograms.push_back(loadShaderProgram(vertexShaderFilename, fragmentShaderFilename));
+	switch (type){
+		case TYPE_TEXTURE_SHADER:
+			indexOfTextureShader = customShaderPrograms.size() - 1;
+			break;
+		case TYPE_PRESS_TEXTURE_SHADER:
+			indexOfPressTextureShader = customShaderPrograms.size() - 1;
+			break;
+		default:
+			//should never get here due to check on top, but just in case:
+			SDL_Log("Whoa, how'd you get past the check on top? Custom shader load error, Shader type not supported: %d", type);
+			break;
+	}
+	
 	return 0;
 }
 
@@ -930,7 +807,7 @@ int window::loadVideo(const char* filename, int x, int y, int w, int h){
 	videoFilename = strdup(filename);
 	videoReady = true;
 	fCount = 0;
-	//cout << "Video Ready" << endl;
+	cout << "Video Ready" << endl;
 	return 0;
 }
 
@@ -1090,6 +967,41 @@ bool window::isRendering(){
 	return videoReady | currentlyRendering; 
 }
 
+bool window::isALetterKey(int keyID){
+	switch (keyID){
+		case (9):
+		case 10:
+		case 11:
+		case 12:
+		case 13:
+		case 14:
+		case 19:
+		case 20:
+		case 21:
+		case 22:
+		case 23:
+		case 34:
+		case 35:
+		case 36:
+		case 37:
+		case 38:
+		case 39:
+		case 42:
+		case 43:
+		case 44:
+		case 45:
+		case 46:
+		case 47:
+		case 58:
+		case 59:
+		case 60:
+			return true;
+		default:
+			break;
+	}
+	return false;
+}
+
 //mulithreaded functions:
 bool window::asyncFunctionCompleted(){
 	return !asyncToDo;
@@ -1104,18 +1016,18 @@ void window::requestClear(){
 	needToClear = true;
 }
 
-void window::requestCustomShader(const char* vertexShaderFilename, const char* fragmentShaderFilename){
+void window::requestCustomShader(const char* vertexShaderFilename, const char* fragmentShaderFilename, int type){
 	asyncToDo = true;
 	needCustomShader = true; 
 	vertexShaderFileNameREQ = strdup(vertexShaderFilename); 
 	fragmentShaderFilenameREQ = strdup(fragmentShaderFilename); 
+	typeREQ = type;
 	return;
 }
 
-void window::requestDrawRect(int z, int x, int y, int width, int height, int r, int g, int b, int a, int keyID, int customShader){
+void window::requestDrawRect(int x, int y, int width, int height, int r, int g, int b, int a, int keyID){
 	asyncToDo = true;
 	needDrawRect = true; 
-	zREQ = z;
 	xREQ = x;
 	yREQ = y;
 	widthREQ = width;
@@ -1125,7 +1037,6 @@ void window::requestDrawRect(int z, int x, int y, int width, int height, int r, 
 	bREQ = b;
 	aREQ = a;
 	keyIDREQ = keyID;
-	customShaderREQ = customShader;
 	return;
 }
 
@@ -1136,10 +1047,9 @@ void window::requestSetbackgroundImage(const char* src){
 	return;
 }
 
-void window::requestDrawCircle(int z, int centerX, int centerY, int radius, int segments, int r, int g, int b, int a, int keyID, int customShader){
+void window::requestDrawCircle(int centerX, int centerY, int radius, int segments, int r, int g, int b, int a, int keyID){
 	asyncToDo = true;
 	needDrawCircle = true;
-	zREQ = z;
 	centerXREQ = centerX;
 	centerYREQ = centerY;
 	radiusREQ = radius;
@@ -1149,15 +1059,13 @@ void window::requestDrawCircle(int z, int centerX, int centerY, int radius, int 
 	bREQ = b;
 	aREQ = a;
 	keyIDREQ = keyID;
-	customShaderREQ = customShader;
 	return;
 }
 
-void window::requestDrawText(const char* text, int z, int x, int y, int width, int height, int r, int g, int b, int a, int keyID, int modifier, int customShader){
+void window::requestDrawText(const char* text, int x, int y, int width, int height, int r, int g, int b, int a, int keyID){
 	asyncToDo = true;
 	needDrawText = true;
 	textREQ = strdup(text);
-	zREQ = z;
 	xREQ = x;
 	yREQ = y;
 	widthREQ = width;
@@ -1167,63 +1075,20 @@ void window::requestDrawText(const char* text, int z, int x, int y, int width, i
 	bREQ = b;
 	aREQ = a;
 	keyIDREQ = keyID;
-	modifierREQ = modifier;
-	customShaderREQ = customShader;
 	return;
 }
 
-void window::requestDrawImage(const char* src, int z, int x, int y, int width, int height, int a, int keyID, int modifier, int customShader){
+void window::requestDrawImage(const char* src, int x, int y, int width, int height, int a, int keyID){
 	asyncToDo = true;
 	needDrawImage = true;
 	srcREQ = strdup(src);
-	zREQ = z;
 	xREQ = x;
 	yREQ = y;
 	widthREQ = width;
 	heightREQ = height;
 	aREQ = a;
 	keyIDREQ = keyID;
-	modifierREQ = modifier;
-	customShaderREQ = customShader;
 	return;
-}
-
-int window::setModifierKeys(std::vector<int> &leftShift, std::vector<int> &leftCtrl, std::vector<int> &leftAlt, std::vector<int> &leftUI, 
-						std::vector<int> &rightShift, std::vector<int> &rightCtrl, std::vector<int> &rightAlt, std::vector<int> &rightUI,
-						std::vector<int> &fn, std::vector<int> &caps){
-	modShiftKeys.clear();
-	modCtrlKeys.clear();
-	modAltKeys.clear();
-	modUIKeys.clear();
-	modFnKeys.clear();
-	modCapKeys.clear();
-	for (int i = 0; i < leftShift.size(); i++)
-		modShiftKeys.push_back(leftShift[i]);
-	for (int i = 0; i < rightShift.size(); i++)
-		modShiftKeys.push_back(rightShift[i]);
-		
-	for (int i = 0; i < leftCtrl.size(); i++)
-		modCtrlKeys.push_back(leftCtrl[i]);
-	for (int i = 0; i < rightCtrl.size(); i++)
-		modCtrlKeys.push_back(rightCtrl[i]);
-		
-	for (int i = 0; i < leftAlt.size(); i++)
-		modAltKeys.push_back(leftAlt[i]);
-	for (int i = 0; i < rightAlt.size(); i++)
-		modAltKeys.push_back(rightAlt[i]);
-		
-	for (int i = 0; i < leftUI.size(); i++)
-		modUIKeys.push_back(leftUI[i]);
-	for (int i = 0; i < rightUI.size(); i++)
-		modUIKeys.push_back(rightUI[i]);
-		
-	for (int i = 0; i < fn.size(); i++)
-		modFnKeys.push_back(fn[i]);
-		
-	for (int i = 0; i < caps.size(); i++)
-		modCapKeys.push_back(caps[i]);
-	
-	return 0;
 }
 
 //clearing graphics:
@@ -1245,8 +1110,8 @@ void window::clearGraphicsMemory(){
 	//do not allow further rendering:
 	setGraphicsLock(true);
 
-	graphicsList.clear();
-	graphicsList.shrink_to_fit();
+	zorderList.clear();
+	zorderList.shrink_to_fit();
 	
 	for (int i = 0; i < vectorShapeGLuint.size(); i++){
 		glDeleteVertexArrays(1, &vectorShapeGLuint[i]);
@@ -1282,6 +1147,8 @@ void window::clearGraphicsMemory(){
 	}
 	customShaderPrograms.clear();
 	customShaderPrograms.shrink_to_fit();
+	indexOfPressTextureShader = -1;
+	indexOfTextureShader = -1;
 	
 	glDeleteTextures(1, &videoTexture);
 	videoTexture = -1;
@@ -1294,22 +1161,10 @@ void window::clearGraphicsMemory(){
 	videoReady = false;
 	fCount = 0;
 	
-	
-	textureShaderDefault = -1;
-	texturePressShaderDefault = -1;
-	
 	if (listOfText.size() > 1){	//keep the first, it's the frame counter
 		listOfText.erase(listOfText.begin() + 1, listOfText.end());
 	}
 	listOfText.shrink_to_fit();
-	
-	
-	modShiftKeys.clear();
-	modCtrlKeys.clear();
-	modAltKeys.clear();
-	modUIKeys.clear();
-	modFnKeys.clear();
-	modCapKeys.clear();
 	
 	needToClear = false;
 	

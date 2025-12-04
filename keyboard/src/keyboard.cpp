@@ -15,117 +15,792 @@ using namespace std;
 
 keyboard::keyboard(){
 	keyboardWindow = new window();
-	int OK = keyboardWindow->initialize(2560, 1440);
+	int OK = keyboardWindow->initialize(screenWidth, screenHeight);
 	//int OK = keyboardWindow->initialize(1920, 1080, false);
 	if (OK != 0){
 		printf("Error initializing window\n");
 		return;
 	}
 	
-	//get physical layouts:
-	pl = new physicalLayout();
-	vector<physicalLayout::keyRect> keyrects = pl->getPhysicalKeySizes();
-	
-	//initialize keys at locations
-	if (keyrects.size() != MAXKEYS){
-		printf("Error in number of keys initialized");
-	}
-	for (int i = 0; i < keyrects.size(); i++){
-		keys.push_back({ i, {keyrects[i].x, keyrects[i].y, keyrects[i].w, keyrects[i].h}, -1, " " });	//no output
-		cout << i << endl;
-	}	
-	
-	//assign ID and location of initial 16 keys:
-	/*
-	int keySize = 96;
-	int rowGap = 120 - keySize;
-	int offsetX = 0;//2096;
-	int offsetY = 0;//895;
-		keys.push_back({ 0, {offsetX + (keySize + rowGap) * 1, offsetY, keySize, keySize}, 0, "/" });
-		keys.push_back({ 1, {offsetX + (keySize + rowGap) * 2, offsetY, keySize, keySize}, 0, "*" });
-		keys.push_back({ 2, {offsetX + (keySize + rowGap) * 3, offsetY, keySize, keySize}, 0, "-" });
-		
-		keys.push_back({ 3, {offsetX + (keySize + rowGap) * 3, offsetY + (keySize + rowGap) * 1, keySize, keySize*2 + rowGap}, 0, "+" });
-		keys.push_back({ 4, {offsetX + (keySize + rowGap) * 2, offsetY + (keySize + rowGap) * 1, keySize, keySize}, 0, "9" });
-		keys.push_back({ 5, {offsetX + (keySize + rowGap) * 1, offsetY + (keySize + rowGap) * 1, keySize, keySize}, 0, "8" });
-		keys.push_back({ 6, {offsetX, offsetY + (keySize + rowGap) * 1, keySize, keySize}, 0, "7" });
-		
-		keys.push_back({ 7, {offsetX, offsetY + (keySize + rowGap) * 2, keySize, keySize}, 0, "4" });		
-		keys.push_back({ 8, {offsetX + (keySize + rowGap) * 1, offsetY + (keySize + rowGap) * 2, keySize, keySize}, 0, "5" });
-		keys.push_back({ 9, {offsetX + (keySize + rowGap) * 2, offsetY + (keySize + rowGap) * 2, keySize, keySize}, 0, "6" });
-		
-		keys.push_back({ 10, {offsetX + (keySize + rowGap) * 3, offsetY + (keySize + rowGap) * 3, keySize, keySize*2 + rowGap}, 0, "\n" });
-		keys.push_back({ 11, {offsetX + (keySize + rowGap) * 2, offsetY + (keySize + rowGap) * 3, keySize, keySize}, 0, "3" });
-		keys.push_back({ 12, {offsetX + (keySize + rowGap) * 1, offsetY + (keySize + rowGap) * 3, keySize, keySize}, 0, "2" });
-		keys.push_back({ 13, {offsetX, offsetY + (keySize + rowGap) * 3, keySize, keySize}, 0, "1" });
-		
-		keys.push_back({ 14, {offsetX, offsetY + (keySize + rowGap) * 4, keySize*2 + rowGap, keySize}, 0, "0" });
-		keys.push_back({ 15, {offsetX + (keySize + rowGap) * 2, offsetY + (keySize + rowGap) * 4, keySize, keySize}, 0, "." });
-		*/
-	
 	return;
 }
 
 int keyboard::run(){
-	//init bluetooth connection:
-	bluetoothConn = new bluetooth();
-	//run hall effect sensors
+	//unzip any new profiles that have arrived:
+	int res = preextractProfiles();
+	if (res == -1){	//error in extraction
+		return -1;
+	}	
+	//check if startup file is found
+	string profileToLoad = initialProfile;
+	ifstream file("startup");
+	if (!file.is_open()){
+		cout << "startup not found. Using default profile: " << initialProfile << endl;
+	}
+	else{
+		getline(file, profileToLoad);
+	}
+	//load profiles:
+	loadProfile(profileToLoad.c_str());
+	//frame counter text:
+	debugText.push_back(keyboardWindow->writeText("000", 100, 100, 2.0f, 0, 0, 0, 255));
+	
+	
+	serial = new serialInterface();
+	if (serial->initSerial() == -1){
+		cout << "Serial could not be initialized, exiting program" << endl;
+		return 0;
+	}
+	
 	bool keyboardActive = true;
 	bool* on = &keyboardActive;
+		
+	#ifdef useBluetooth
+		bluetoothConn = new bluetooth();	//init bluetooth connection:
+	#endif
 	
-	loadProfile("eng");
-	
-	//run numpad profile initialization:
-	
-	//frame counter text:
-		debugText.push_back(keyboardWindow->writeText("000", 100, 100, 2.0f, 0, 0, 0, 255));
-	
-	//debugging text:
-	/*/
-	debugTextOn = true;
-	for (int i = 0; i < MAXKEYS; i++){
-		debugText.push_back(keyboardWindow->writeText("000", keys[i].bounds.x + 25, keys[i].bounds.y + 40, 0.5f, 0, 0, 0, 255));
-	}/**/
-	
-	/*/
-	for (int i = 0; i < MAXKEYS; i++){
-		rectKey(i, 0, 0, 0, 100, 1.0f, 1.0f);
-		textureKey(i, 1, to_string(i), 1.0f, 1.0f);
-	}
-	/**/
-
-/*	keyboardWindow->drawImage("img/wide.jpeg", 110, 10, 100, 100, 255);
-	keyboardWindow->drawRect(10, 10, 100, 200, 255, 225, 0, 255);
-	keyboardWindow->drawText("\u003F", 400, 10, 100, 200, 0, 0, 255, 255);
-	assignKeyFont("img/HanyiSentyPagoda Regular.ttf"); 
-	keyboardWindow->drawText("hello world", 300, 300, 250, 100, 0, 255, 0, 255);
-	keyboardWindow->drawImage("img/wide.jpeg", 50, 50, 200, 100, 255);
-	keyboardWindow->setbackrgoundColor(255, 0, 0, 255);
-	keyboardWindow->setbackgroundImage("img/wide.jpeg");
-	keyboardWindow->drawCircle(300, 380, 100, 6, 0, 255, 255, 255);
-*/
-
+	//clean this up later when bluetooth and halleffect comes back:
+	/*
 	//run bluetooth interaction:
-	thread bluetoothThread([this, on](){ bluetoothConn->begin(on, false); });	//true for testing, false for bluetooth on
+	//thread bluetoothThread([this, on](){ bluetoothConn->begin(on, false); });	//true for testing, false for bluetooth on
 	//run hall effect thread:
 	thread hallEffectThread([this, on](){ runHallEffectSensors(on); });
+	*/
 
 	//keyboard monitor thread:
 	thread monitorThread([this, on](){ keyboardMonitor(on); });
 
 	//run graphics thread:
-	keyboardWindow->runWindow(pressedKeys);	//graphics calls must run in main thread
+	keyboardWindow->runWindow(keys);	//graphics calls must run in main thread
 	
+	//once returning from this thread, the rest of the program should end
 	keyboardActive = false;	
-	hallEffectThread.join();	//wait for hall effect polling to finish
 	monitorThread.join();
-	bluetoothThread.join();
+	//hallEffectThread.join();	//wait for hall effect polling to finish
+	//bluetoothThread.join();
+	
 
 	return 0;	//ends program
 }
 
+void keyboard::keyboardMonitor(bool* on){
+	while (*on){
+	if (wantToRerender){
+	//rerender keys
+	inMainThread = false;
+	keyboardWindow->setGraphicsLock(true);
+	while (keyboardWindow->isRendering())
+		__asm__("nop");	//wait for rendering to finish
+							cout << "non-main thread clearing" << endl;
+							keyboardWindow->requestClear();
+							while (!keyboardWindow->asyncFunctionCompleted())
+								__asm__("nop");
+								
+								
+	string shaderPath = "profiles/scram/shaders/";
+	int numberOfCustomShaders = profileJSON["shaders"].size();
+	for (int i = 0; i < numberOfCustomShaders; i++){
+		string vShaderPath = profileJSON["shaders"][i];
+		vShaderPath = (shaderPath + vShaderPath + ".vert");
+		string fShaderPath = profileJSON["shaders"][i];
+		fShaderPath = (shaderPath + fShaderPath + ".frag");
+		if (loadCustomShader(vShaderPath.c_str(), fShaderPath.c_str()) != 0){
+			cout << "Could not get compile custom shader " << profileJSON["shaders"][i] << endl;
+			numberOfCustomShaders--;
+		}
+	}
+									//check custom shaders:
+	int gShader = profileJSON["shaderGlobal"];
+	if (gShader >= 0 && keyboardWindow->setCustomGlobalTextureShader(gShader) == -1){
+		cout << "Global texture shader out of range: " << gShader<< endl
+		<< "\tCurrent Number of shaders: " << numberOfCustomShaders << endl;
+	}
+	gShader = profileJSON["pressShaderGlobal"];
+	if (gShader >= 0 && keyboardWindow->setCustomGlobalPressedTextureShader(gShader) == -1){
+		cout << "Global texture shader out of range: " << gShader << endl
+		<< "\tCurrent Number of shaders: " << numberOfCustomShaders << endl;
+	}
+								//set keyboard UI graphics:
+								
+	for (int i = 0; i < keys.size(); i++){	
+		int heldTypeModifier = 0;
+		if (keys[i]->useImage || keys[i]->text.length() > 0){	//texture via image or text
+			for (int j = 0; j < numberOfModifiers; j++){
+				if (keys[i]->modText[j].length() > 0){
+					heldTypeModifier |= modifierBit[j];
+				}
+			}
+			for (int j = 0; j < numberOfModifiers; j++){
+				if (keys[i]->modText[j].length() > 0){
+					int newMod = ((heldTypeModifier - modifierBit[j]) << 16) + modifierBit[j];
+					textureKey(i, keys[i]->useImage, keys[i]->modText[j], newMod, path, keys[i]->modShader[j]);
+				}
+			}
+			heldTypeModifier = ((0x1FF ^ heldTypeModifier) & 0x1FF) + FORNORMALTEXTURE;
+			if (heldTypeModifier == 0x1FF + FORNORMALTEXTURE) heldTypeModifier = -1;
+			textureKey(i, keys[i]->useImage, keys[i]->text, heldTypeModifier, path);
+		}
+		else if (keys[i]->isRect){	//is a rectangle
+			rectKey(i);
+		}
+		else if (!keys[i]->isRect){	//is a circle
+			circleKey(i, keys[i]->w / 2, CIRCLESEGMENTS);
+		}
+	}
+	
+	wantToRerender = false;
+	keyboardWindow->setGraphicsLock(false);
+	continue;
+	}
+	//new touch screen monitoring version:
+	while (keyboardWindow->eventsToProcess.load(memory_order_acquire) == 0 && *on)
+		__asm__("nop");		//idle until events available
+	while (keyboardWindow->accessInputMUX.load(memory_order_acquire) > 0 && *on)
+		__asm__("nop");		//idle until access is available
+	if (!*on) break;
+	keyboardWindow->accessInputMUX.fetch_add(1, memory_order_acq_rel);		//obtain access
+	for (int i = 0; i < keyboardWindow->touchIOqueue.size(); i++){
+		//process event
+		int coreX = static_cast<int>(keyboardWindow->touchIOqueue[i].x * screenWidth);
+		int coreY = static_cast<int>(keyboardWindow->touchIOqueue[i].y * screenHeight);
+		int keyArraySize = keys.size();
+		for (int k = 0; k < keyArraySize; k++){
+			if (keys[k]->x <= coreX && keys[k]->x + keys[k]->w >= coreX &&
+				keys[k]->y <= coreY && keys[k]->y + keys[k]->h >= coreY){
+				keys[k]->pressed = keyboardWindow->touchIOqueue[i].press;
+				//output:
+				switch (keys[k]->outputType){
+					case HIDOUTPUT:
+						switch (keyboardWindow->touchIOqueue[i].press){
+							case true:
+								cout << "HID" << endl;
+								serial->pressKey(keys[k]->HIDcode);
+								break;
+							default:
+								serial->releaseKey(keys[k]->HIDcode);
+								break;
+						}
+						break;
+					case UNICODEOUTPUT:
+						switch (keyboardWindow->touchIOqueue[i].press){
+							case true:
+								cout << "Unicode out: " << keys[k]->outputValue << " - " << keys[k]->unicodeLength << endl;
+								serial->pressUnicode(keys[k]->unicodeCode, keys[k]->unicodeLength);
+								break;
+							default:
+								serial->releaseUnicode(keys[k]->unicodeCode, keys[k]->unicodeLength);
+								break;
+						}
+						break;
+					case PROFILESWAPOUTPUT:
+						switch (keyboardWindow->touchIOqueue[i].press){
+							case true:
+								cout << "Swap profile: " << keys[k]->outputValue << endl;
+								break;
+							default:
+								//cout << "Swap profile up: " << keys[k]->outputValue << endl;
+								swapProfile(keys[k]->outputValue.c_str());
+								keyArraySize = 0;
+								break;
+						}
+						break;
+					default:
+						cout << "unknown output type: " << keys[k]->outputType << endl;
+						break;
+				}
+				//running plugin events on key up:
+				if (keyboardWindow->touchIOqueue[i].press){
+					if (keys[k]->pluginEvent >= 0 && keys[k]->pluginEvent < plugins.size()){
+						if (plugins[keys[k]->pluginEvent].onPress){			
+							cout << "running plugin: " << keys[k]->pluginEvent << endl;
+							int ret = plugins[keys[k]->pluginEvent].onPress(keys);
+							if (ret == 1){
+								wantToRerender = true;	
+							}
+						}
+					}
+				}
+				break;
+			}
+		}
+		
+		//cout << "Processed (" << coreX << ", " << coreY << "): " << keyboardWindow->touchIOqueue[i].press << endl;	
+		keyboardWindow->eventsToProcess.fetch_sub(1, memory_order_acq_rel);	//decrease events
+	}
+	keyboardWindow->touchIOqueue.clear();
+	keyboardWindow->accessInputMUX.fetch_sub(1, memory_order_acq_rel);		//release access
+	}
+	serial->endSerial();
+}
+
+int keyboard::swapProfile(const char* newProfileFolderName){
+	keyboardWindow->setGraphicsLock(true);	//lock the graphics process to allow for async requests
+	while (keyboardWindow->isRendering())
+		__asm__("nop");	//wait for rendering to finish
+	return loadProfile(newProfileFolderName, false);	//does not run in main thread
+}
+
+int keyboard::loadProfile(const char* profileFolderName, bool mainThread){
+	inMainThread = mainThread;	
+	//determine if the profile to load exists:
+	struct stat sb;
+	string profiles = "profiles/";
+	path = (profiles + profileFolderName);
+	if (!(stat(path.c_str(), &sb) == 0 && S_ISDIR(sb.st_mode))){
+		cout << "No profile folder with name: " << path << " found" << endl;
+		return -1;
+	}
+	cout << "Loading keyboard profile: " << path << endl;	
+	
+	//determine if layout.prof is found
+	string profile = "/layout.prof";
+	string profPath = (path + profile);
+	ifstream file(profPath.c_str());
+	if (!file.good()){
+		cout << "No layout.prof file found in " << path << endl;
+		return -1;
+	}
+	cout << "Loading layout.prof..." << endl;
+	
+	//at this point it's okay to clear the graphics memory:
+	if (mainThread)
+		keyboardWindow->clearGraphicsMemory();
+	else{
+		cout << "non-main thread clearing" << endl;
+		keyboardWindow->requestClear();
+		while (!keyboardWindow->asyncFunctionCompleted())
+			__asm__("nop");
+	}
+	
+	//read file and update layout
+	file >> profileJSON;
+	
+	keys.clear();			//clear keys vector
+	profileFonts.clear();	//clear font vector<string>
+	
+	//load global values:
+	int numberOfKeys = profileJSON["keys"].size();
+	cout << "Number of Keys: " << numberOfKeys << endl;
+	int globalOffsetX = profileJSON["globalOffsetX"];
+	int globalOffsetY = profileJSON["globalOffsetY"];
+	profileFonts = profileJSON["fonts"];	//vector of strings
+	for (int i = 0; i < profileFonts.size(); i++){
+		profileFonts[i] = (path + "/fonts/" + profileFonts[i]);
+		cout << profileFonts[i] << endl;
+	}
+	
+	//background:
+
+	int r; int g; int b; int a;
+	string BGcolor = profileJSON["backgroundColor"];
+	if (BGcolor.length() == 8 || BGcolor.length() == 9){
+		parseRGBAfromHex(profileJSON["backgroundColor"], &r, &g, &b, &a);
+		setKeyboardBackgroundColor(r, g, b, a);
+	}
+	string imgPath = profileJSON["backgroundImgPath"];
+	if (imgPath.length() > 0){
+		if (!profileJSON["backgroundIsVideo"]){
+			setKeyboardBGImg((path + "/images/" + imgPath).c_str());
+		}
+		else{
+			loadVideo((path + "/images/" + imgPath).c_str(), 0, 0, screenWidth, screenHeight);
+		}
+	}
+	
+	//load shaders
+	string layoutName = profileFolderName;
+	string shaderPath = "profiles/" + layoutName + "/shaders/";
+	int numberOfCustomShaders = profileJSON["shaders"].size();
+	for (int i = 0; i < numberOfCustomShaders; i++){
+		string vShaderPath = profileJSON["shaders"][i];
+		vShaderPath = (shaderPath + vShaderPath + ".vert");
+		string fShaderPath = profileJSON["shaders"][i];
+		fShaderPath = (shaderPath + fShaderPath + ".frag");
+		if (loadCustomShader(vShaderPath.c_str(), fShaderPath.c_str()) != 0){
+			cout << "Could not get compile custom shader " << profileJSON["shaders"][i] << endl;
+			numberOfCustomShaders--;
+		}
+	}
+	
+	//check custom shaders:
+	int gShader = profileJSON["shaderGlobal"];
+	if (gShader >= 0 && keyboardWindow->setCustomGlobalTextureShader(gShader) == -1){
+		cout << "Global texture shader out of range: " << gShader<< endl
+		<< "\tCurrent Number of shaders: " << numberOfCustomShaders << endl;
+	}
+	gShader = profileJSON["pressShaderGlobal"];
+	if (gShader >= 0 && keyboardWindow->setCustomGlobalPressedTextureShader(gShader) == -1){
+		cout << "Global texture shader out of range: " << gShader << endl
+		<< "\tCurrent Number of shaders: " << numberOfCustomShaders << endl;
+	}
+
+	
+	//load keys:
+	for (int i = 0; i < numberOfKeys; i++){
+		parseRGBAfromHex(profileJSON["keys"][i]["RGBA"], &r, &g, &b, &a);
+		int x = profileJSON["keys"][i]["X"];
+		int y = profileJSON["keys"][i]["Y"];
+		string modText[numberOfModifiers];
+		int modShader[numberOfModifiers];
+		int modOutputTypes[numberOfModifiers];
+		string modOutputValue[numberOfModifiers];
+		if (profileJSON["keys"][i]["modText"].size() != numberOfModifiers){
+			cout << "Incorrect number of text entries in \"modText\" for key " << i 
+				<< " (" << profileJSON["keys"][i]["outputValue"] << ")" << endl;
+			return -1;
+		}
+		if (profileJSON["keys"][i]["modShader"].size() != numberOfModifiers){
+			cout << "Incorrect number of text entries in \"modShader\" for key " << i 
+				<< " (" << profileJSON["keys"][i]["outputValue"] << ")" << endl;
+			return -1;
+		}
+		for (int j = 0; j < numberOfModifiers; j++){
+			modText[j] = profileJSON["keys"][i]["modText"][j];
+			modShader[j] = profileJSON["keys"][i]["modShader"][j];
+			modOutputTypes[j] = getOutputType(profileJSON["keys"][i]["modType"][j]);
+			modOutputValue[j] = profileJSON["keys"][i]["modOutputValue"][j];
+		}
+		//checking shaders
+		int kShader = profileJSON["keys"][i]["shader"];
+		if (kShader >= numberOfCustomShaders){ 
+			kShader = -1;
+			cout << "Custom Shader for key " << i << 
+				" (" << profileJSON["keys"][i]["outputValue"] << ") out of range" << endl;
+		}
+		int kPressShader = profileJSON["keys"][i]["pressShader"];
+		if (kPressShader >= numberOfCustomShaders){ 
+			kPressShader = -1;
+			cout << "Custom Press Shader for key " << i << 
+				" (" << profileJSON["keys"][i]["outputValue"] << ") out of range" << endl;
+		}
+		//push keys into the keys vector
+		key* k = new key(profileJSON["keys"][i]["Z"], 
+						x + globalOffsetX, y + globalOffsetY,
+						profileJSON["keys"][i]["W"], profileJSON["keys"][i]["H"],
+						r, g, b, a, profileJSON["keys"][i]["text"],	profileJSON["keys"][i]["font"],
+						profileJSON["keys"][i]["isRect"], profileJSON["keys"][i]["useImage"], 
+						profileJSON["keys"][i]["affectedByCapsLock"], 
+						kShader, kPressShader, 
+						getOutputType(profileJSON["keys"][i]["outputType"]), profileJSON["keys"][i]["outputValue"],
+						modText, modShader, modOutputTypes, modOutputValue,
+						profileJSON["keys"][i]["pluginEvent"]);
+		keys.push_back(k);					
+	}
+	
+	//this is included here as a work around for crashing when keyboards have different number of keys
+	while (keys.size() < 110){	
+		string modText[numberOfModifiers] = { "", "", "", "", "" };
+		int modShader[numberOfModifiers] = { -1, -1, -1, -1, -1 };
+		int modOutputTypes[numberOfModifiers] = { 0, 0, 0, 0, 0 };
+		string modOutputValue[numberOfModifiers] = { "", "", "", "", "" };
+		key* dummyKey = new key(0, 0, 0, 0, 0, 
+								0, 0, 0, 0, 
+							"", -1, true, false, false, -1, -1, 0, "", 
+			modText, modShader, modOutputTypes, modOutputValue, -1);
+		keys.push_back(dummyKey);
+	}
+	
+	//importing plugins
+	string pluginPath = "profiles/" + layoutName + "/plugins/";	//plugin path
+	plugins.clear();	//clear all old plugins	
+	int numberOfPlugins = profileJSON["plugins"].size();
+	for (int i = 0; i < numberOfPlugins; i++){
+		if (loadPlugin(pluginPath, profileJSON["plugins"][i])){
+			if (plugins[plugins.size() - 1].onLoad){
+				plugins[plugins.size() - 1].onLoad(keys);	//run load function
+			}
+		}
+		else{
+			cerr << "Could not load plugin: " << profileJSON["plugins"][i] << endl;
+		}
+	}
+	
+	//reset modifier key vectors
+	leftShiftKeys.clear();
+	leftCtrlKeys.clear();
+	leftAltKeys.clear();
+	leftUIKeys.clear();
+	rightShiftKeys.clear();
+	rightCtrlKeys.clear();
+	rightAltKeys.clear();
+	rightUIKeys.clear();
+	FnKeys.clear();
+	capsKeys.clear();
+	
+	//scan for modifier keys:
+	for (int i = 0; i < keys.size(); i++){
+		if (keys[i]->outputType == HIDOUTPUT){
+			if (keys[i]->HIDcode == KC_LEFT_SHIFT){
+				leftShiftKeys.push_back(i);
+				//cout << "Left Shift: " << i << endl;
+				continue;	
+			}
+			if (keys[i]->HIDcode == KC_LEFT_CTRL){
+				leftCtrlKeys.push_back(i);
+				//cout << "Left Ctrl: " << i << endl;
+				continue;	
+			}
+			if (keys[i]->HIDcode == KC_LEFT_ALT){
+				leftAltKeys.push_back(i);
+				//cout << "Left Alt: " << i << endl;
+				continue;	
+			}
+			if (keys[i]->HIDcode == KC_LEFT_GUI){
+				leftUIKeys.push_back(i);
+				//cout << "Left GUI: " << i << endl;
+				continue;	
+			}
+			if (keys[i]->HIDcode == KC_RIGHT_SHIFT){
+				rightShiftKeys.push_back(i);
+				//cout << "Right Shift: " << i << endl;
+				continue;	
+			}
+			if (keys[i]->HIDcode == KC_RIGHT_CTRL){
+				rightCtrlKeys.push_back(i);
+				//cout << "Right Ctrl: " << i << endl;
+				continue;	
+			}
+			if (keys[i]->HIDcode == KC_RIGHT_ALT){
+				rightAltKeys.push_back(i);
+				//cout << "Right Alt: " << i << endl;
+				continue;	
+			}
+			if (keys[i]->HIDcode == KC_RIGHT_GUI){
+				rightUIKeys.push_back(i);
+				//cout << "Right GUI: " << i << endl;
+				continue;	
+			}
+			if (keys[i]->HIDcode == KC_FN){
+				FnKeys.push_back(i);
+				//cout << "Fn: " << i << endl;
+				continue;	
+			}
+			if (keys[i]->HIDcode == KC_CAPS_LOCK){
+				capsKeys.push_back(i);
+				//cout << "Caps: " << i << endl;
+			}
+		}
+	}	
+	//give to graphics:
+	keyboardWindow->setModifierKeys(leftShiftKeys, leftCtrlKeys, leftAltKeys, leftUIKeys,
+									rightShiftKeys, rightCtrlKeys, rightAltKeys, rightUIKeys, FnKeys, capsKeys);
+	
+	//set keyboard UI graphics:
+	for (int i = 0; i < keys.size(); i++){		
+		int heldTypeModifier = 0;
+		if (keys[i]->useImage || keys[i]->text.length() > 0){	//texture via image or text
+			for (int j = 0; j < numberOfModifiers; j++){
+				if (keys[i]->modText[j].length() > 0){
+					heldTypeModifier |= modifierBit[j];
+				}
+			}
+			for (int j = 0; j < numberOfModifiers; j++){
+				if (keys[i]->modText[j].length() > 0){
+					int newMod = ((heldTypeModifier - modifierBit[j]) << 16) + modifierBit[j];
+					textureKey(i, keys[i]->useImage, keys[i]->modText[j], newMod, path, keys[i]->modShader[j]);
+				}
+			}
+			heldTypeModifier = ((0x1FF ^ heldTypeModifier) & 0x1FF) + FORNORMALTEXTURE;
+			if (heldTypeModifier == 0x1FF + FORNORMALTEXTURE) heldTypeModifier = -1;
+			textureKey(i, keys[i]->useImage, keys[i]->text, heldTypeModifier, path);
+		}
+		else if (keys[i]->isRect){	//is a rectangle
+			rectKey(i);
+		}
+		else if (!keys[i]->isRect){	//is a circle
+			circleKey(i, keys[i]->w / 2, CIRCLESEGMENTS);
+		}
+	}
+	
+	//set up free objects
+	int numberOfFreeObj = profileJSON["freeObj"].size();
+	for (int i = 0; i < numberOfFreeObj; i++){
+		int freeObjectType = profileJSON["freeObj"][i]["freeType"];
+		parseRGBAfromHex(profileJSON["freeObj"][i]["RGBA"], &r, &g, &b, &a);
+		int rad = profileJSON["freeObj"][i]["W"];
+		rad /= 2;
+		
+		int shader = profileJSON["freeObj"][i]["shader"];
+		if (shader >= numberOfCustomShaders){ 
+			shader = -1;
+			cout << "Custom Shader for object " << i << " out of range" << endl;
+		}
+		
+		switch (freeObjectType){
+			case 0:		//freeRect
+				freeRect(profileJSON["freeObj"][i]["Z"], profileJSON["freeObj"][i]["X"], profileJSON["freeObj"][i]["Y"],
+				profileJSON["freeObj"][i]["W"], profileJSON["freeObj"][i]["H"], r, g, b, a, shader);
+				break;
+			case 1:		//free circle
+				freeCircle(profileJSON["freeObj"][i]["Z"], profileJSON["freeObj"][i]["X"], profileJSON["freeObj"][i]["Y"],
+				rad, CIRCLESEGMENTS, r, g, b, a, shader);
+				break;
+			case 2:		//freeImage
+				freeTexture(profileJSON["freeObj"][i]["Z"], profileJSON["freeObj"][i]["X"], profileJSON["freeObj"][i]["Y"], 
+				profileJSON["freeObj"][i]["W"], profileJSON["freeObj"][i]["H"], profileJSON["freeObj"][i]["text"], 
+				true, r, g, b, a, path, shader);
+				break;
+			case 3:		//freeText
+				freeTexture(profileJSON["freeObj"][i]["Z"], profileJSON["freeObj"][i]["X"], profileJSON["freeObj"][i]["Y"], 
+				profileJSON["freeObj"][i]["W"], profileJSON["freeObj"][i]["H"], profileJSON["freeObj"][i]["text"], 
+				false, r, g, b, a, path, profileJSON["freeObj"][i]["font"], shader);
+				break;
+				
+			default:
+				cout << "Unknown object type in \"freeObj\" section of layout.prof" << endl;
+		}
+	}	
+	
+	//unlock graphics:
+	keyboardWindow->setGraphicsLock(false);
+	//profile loaded sucessfully
+	return 0;
+}
+
+
+bool keyboard::loadPlugin(std::string pluginPath, std::string pluginName){
+	void* handle = dlopen((pluginPath + "/" + pluginName).c_str(), RTLD_LAZY);
+	if (!handle) {
+		return false;
+	}
+	customPlugin p;
+	p.handle = handle;
+	p.onLoad = (int(*)(vector<key*>)) dlsym(handle, "onLoad");
+	p.onPress = (int(*)(vector<key*>)) dlsym(handle, "onPress");	
+	plugins.push_back(p);	//add to the plugins vector
+	return true;
+}
+
+int keyboard::textureKey(int keyID, int layoutType, string layoutString, int modifiers, string profilePath, int customShader){
+	if (keys[keyID]->useImage){
+		profilePath += "/images/";
+		//int drawImage(const char* src, int x, int y, int width, int height, int a);
+		if (inMainThread)
+			keyboardWindow->drawImage((profilePath + layoutString).c_str(), keys[keyID]->z, 
+						keys[keyID]->x, keys[keyID]->y, keys[keyID]->w, keys[keyID]->h, 
+						keys[keyID]->a, keyID, modifiers, customShader);
+		else{
+			keyboardWindow->requestDrawImage((profilePath + layoutString).c_str(), keys[keyID]->z, 
+						keys[keyID]->x, keys[keyID]->y, keys[keyID]->w, keys[keyID]->h, 
+						keys[keyID]->a, keyID, modifiers, customShader);
+			while (!keyboardWindow->asyncFunctionCompleted())
+				__asm__("nop");
+		}
+	}
+	else {	//draw text
+		if (profileFonts.size() == 0){
+			printf("No fonts loaded for this profile\n");
+			return -1;
+		}
+		if (profileFonts.size() <= keys[keyID]->font){
+			printf("Font out of range: %d. Fonts loaded only: %d\n", keys[keyID]->font, static_cast<int>(profileFonts.size()));
+			return -1;
+		}
+		//set font to key's font:
+		assignKeyboardFont(profileFonts[keys[keyID]->font].c_str());
+		//int drawText(const char* text, int x, int y, int width, int height, int r, int g, int b, int a);
+		if (inMainThread)
+			keyboardWindow->drawText(layoutString.c_str(), keys[keyID]->z, 
+						keys[keyID]->x, keys[keyID]->y, keys[keyID]->w, keys[keyID]->h, 
+						keys[keyID]->r, keys[keyID]->g, keys[keyID]->b, keys[keyID]->a,
+						keyID, modifiers, customShader);
+		else {
+			keyboardWindow->requestDrawText(layoutString.c_str(), keys[keyID]->z, 
+						keys[keyID]->x, keys[keyID]->y, keys[keyID]->w, keys[keyID]->h, 
+						keys[keyID]->r, keys[keyID]->g, keys[keyID]->b, keys[keyID]->a,
+						keyID, modifiers, customShader);
+			while (!keyboardWindow->asyncFunctionCompleted())
+				__asm__("nop");
+		}
+	}
+	return 0;
+}
+
+int keyboard::rectKey(int keyID){
+	if (inMainThread)
+		return keyboardWindow->drawRect(keys[keyID]->z, keys[keyID]->x, keys[keyID]->y, 
+				keys[keyID]->w, keys[keyID]->h, 
+				keys[keyID]->r, keys[keyID]->g, keys[keyID]->b, keys[keyID]->a, keyID, keys[keyID]->shader);
+	//else request async
+	keyboardWindow->requestDrawRect(keys[keyID]->z, keys[keyID]->x, keys[keyID]->y, 
+			keys[keyID]->w, keys[keyID]->h, 
+			keys[keyID]->r, keys[keyID]->g, keys[keyID]->b, keys[keyID]->a, keyID, keys[keyID]->shader);
+	while (!keyboardWindow->asyncFunctionCompleted())
+		__asm__("nop");
+
+	return keyboardWindow->asyncOutput();
+}
+
+int keyboard::circleKey(int keyID, int radius, int segments){
+	if (inMainThread)
+		return keyboardWindow->drawCircle(keys[keyID]->z, keys[keyID]->x + (keys[keyID]->w / 2), 
+					keys[keyID]->y + (keys[keyID]->h / 2), radius, segments,
+					keys[keyID]->r, keys[keyID]->g, keys[keyID]->b, keys[keyID]->a, keyID, keys[keyID]->shader);
+	//else request async
+	keyboardWindow->requestDrawCircle(keys[keyID]->z, keys[keyID]->x + (keys[keyID]->w / 2), 
+					keys[keyID]->y + (keys[keyID]->h / 2), radius, segments,
+					keys[keyID]->r, keys[keyID]->g, keys[keyID]->b, keys[keyID]->a, keyID, keys[keyID]->shader);
+	while (!keyboardWindow->asyncFunctionCompleted())
+		__asm__("nop");
+	return keyboardWindow->asyncOutput();
+}
+
+int keyboard::assignKeyboardFont(const char* fontname){
+	return keyboardWindow->setFont(fontname);
+}
+
+int keyboard::setKeyboardBackgroundColor(int r, int g, int b, int a){
+	if (r < 256 && g < 256 && b < 256 && a < 256)
+		keyboardWindow->setbackrgoundColor(r, g, b, a);
+	else {
+		SDL_Log("Color value over 255 detected");
+		return -1;
+	}
+	return 0;
+}
+
+int keyboard::assignTextColor(int r, int g, int b, int a){
+	if (r < 256 && g < 256 && b < 256 && a < 256)
+		textColor = {r, g, b, a};
+	else {
+		SDL_Log("Color value over 255 detected");
+		return -1;
+	}
+	return 0;
+}
+
+bool keyboard::parseRGBAfromHex(const string& RGBA, int* r, int* g, int* b, int* a){
+	string hex = (RGBA[0] == '#') ? RGBA.substr(1) : RGBA;
+	if (hex.length() != 8)
+		//incorrect string length
+		return false;
+	
+	*r = stoi(hex.substr(0, 2), nullptr, 16);
+	*g = stoi(hex.substr(2, 2), nullptr, 16);
+	*b = stoi(hex.substr(4, 2), nullptr, 16);
+	*a = stoi(hex.substr(6, 2), nullptr, 16);
+	return true;
+}
+
+
+int keyboard::freeRect(int z, int x, int y, int w, int h, int r, int g, int b, int a, int customShader){
+	if (inMainThread)
+		return keyboardWindow->drawRect(z, x, y, w, h, r, g, b, a, customShader=customShader);
+		//else request async
+	keyboardWindow->requestDrawRect(z, x, y, w, h, r, g, b, a, customShader=customShader);
+	while (!keyboardWindow->asyncFunctionCompleted())
+		__asm__("nop");
+	return keyboardWindow->asyncOutput();
+}
+
+int keyboard::freeCircle(int z, int x, int y, int radius, int segments, int r, int g, int b, int a, int customShader){
+	if (inMainThread)
+		return keyboardWindow->drawCircle(z, x, y, radius, segments, r, g, b, a, customShader=customShader);
+	//else request async
+	keyboardWindow->requestDrawCircle(z, x, y, radius, segments, r, g, b, a, customShader=customShader);
+	while (!keyboardWindow->asyncFunctionCompleted())
+		__asm__("nop");
+	return keyboardWindow->asyncOutput();
+}
+
+int keyboard::freeTexture(int z, int x, int y, int w, int h, string layoutText, bool isImage, int r, int g, int b, int a, string profilePath, int font, int customShader){
+	if (isImage){
+		//int drawImage(const char* src, int x, int y, int width, int height, int a);
+		if (inMainThread)
+			keyboardWindow->drawImage((profilePath + layoutText).c_str(), z, x, y, w, h, a, customShader=customShader);
+		else{
+			keyboardWindow->requestDrawImage((profilePath + layoutText).c_str(), z, x, y, w, h, a, customShader=customShader);
+			while (!keyboardWindow->asyncFunctionCompleted())
+				__asm__("nop");
+		}
+	}
+	else {	//draw text
+		if (profileFonts.size() == 0){
+			printf("No fonts loaded for this profile\n");
+			return -1;
+		}
+		if (profileFonts.size() <= font){
+			printf("Font out of range: %d. Fonts loaded only: %d\n", font, static_cast<int>(profileFonts.size()));
+			return -1;
+		}
+		//set font to key's font:
+		assignKeyboardFont(profileFonts[font].c_str());
+		//int drawText(const char* text, int x, int y, int width, int height, int r, int g, int b, int a);
+		if (inMainThread)
+			keyboardWindow->drawText(layoutText.c_str(), z, x, y, w, h, r, g, b, a, customShader=customShader);
+		else {
+			keyboardWindow->requestDrawText(layoutText.c_str(), z, x, y, w, h, r, g, b, a, customShader=customShader);
+			while (!keyboardWindow->asyncFunctionCompleted())
+				__asm__("nop");
+		}
+	}
+	return 0;
+}
+
+int keyboard::freeDebugText(int x, int y, const char* toWrite, float size, int r, int g, int b, int a){
+	if (keyboardWindow->writeText(toWrite, x, y, size, r, g, b, a) == nullptr)
+		return -1;
+	return 0;
+}
+	
+int keyboard::setKeyboardBGImg(const char* src){
+	if (inMainThread)
+		return keyboardWindow->setbackgroundImage(src);
+	//else request async
+	keyboardWindow->requestSetbackgroundImage(src);
+	while (!keyboardWindow->asyncFunctionCompleted())
+		__asm__("nop");
+	return keyboardWindow->asyncOutput();	
+}
+
+int keyboard::loadVideo(const char* filename, int x, int y, int w, int h){
+	return keyboardWindow->loadVideo(filename, x, y, w, h);
+}
+
+int keyboard::loadCustomShader(const char* vertexShader, const char* fragmentShader){
+	if (inMainThread)
+		return keyboardWindow->loadCustomShaderProgram(vertexShader, fragmentShader);
+	//else request async
+	keyboardWindow->requestCustomShader(vertexShader, fragmentShader);
+	while (!keyboardWindow->asyncFunctionCompleted())
+		__asm__("nop");
+	return keyboardWindow->asyncOutput();
+}
+
+int keyboard::preextractProfiles(){
+	//search for .zip files in /profiles
+	filesystem::path profileDir = "profiles";
+	
+	//if no directory of same name, extract files (extraction skipped if dir found)
+	for (auto& entry : filesystem::directory_iterator(profileDir)){
+		if (entry.is_regular_file() && entry.path().extension() == ".zip"){
+			string zipName = entry.path().stem().string();	//no .zip portion on string
+			filesystem::path extractionDir = profileDir / zipName;
+			
+			if (!filesystem::exists(extractionDir)){	//skips if already exists
+				cout << "Extracting: " << entry.path().filename() << endl;
+				
+				//use system unzip command
+				string command = "unzip -q \"" + entry.path().string() + "\" -d \"" + extractionDir.string() + "\"";
+				int result = system(command.c_str());
+				
+				if (result != 0){
+					cerr << "Failed to extract " << entry.path().filename() << endl;
+					return -1;
+				}
+				else{
+					cout << "Extraction of " << entry.path().filename() << " sucessful" << endl;
+				}
+			}
+			
+		}
+	}
+	return 0;
+}
+
 //hall effect sensors -------------------------------------------------------------------
 void keyboard::runHallEffectSensors(bool* on){	
+	/*
 	//create and initailize new hallEffectReader class
 	hallEffectReader* hallEffectKeyboard = new hallEffectReader();
 	hallEffectKeyboard->initSPI(SPIchannel, SPIspeed, CSp0, CSp1, CSp2, CSp3);
@@ -186,7 +861,7 @@ void keyboard::runHallEffectSensors(bool* on){
 			currentTime = SDL_GetTicks();
 		}
 		lastTime = currentTime;
-		*/
+		* /
 		
 		//increase index:
 		index++;
@@ -196,693 +871,6 @@ void keyboard::runHallEffectSensors(bool* on){
 		//mark as pressed:
 		//pressedKeys[i] = true;
 	}
+	*/
 	return;
-}
-
-void keyboard::keyboardMonitor(bool* on){
-	//monitor for first 6 non-modifier keys that are pressed and add to report
-	//if no keys (including modifier keys) are pressed when last check there were, a final null report is sent
-	//currently the function only checks for first 6 in the pressed array, optimally it should check for last 6 pressed
-	bool lastKeyStatus[MAXKEYS] = {false};
-	
-	Uint32 lastTime = SDL_GetTicks();
-	Uint32 currentTime = SDL_GetTicks();
-	
-	bool leftCtrl, leftShift, leftAlt, leftMeta, rightCtrl, rightShift, rightAlt, rightMeta = false;
-	#define leftCtrlKey 5
-	#define leftShiftKey 4
-	#define leftAltKey 7
-	#define leftMetaKey 6
-	#define rightCtrlKey 79
-	#define rightShiftKey 75
-	#define rightAltKey 76
-	#define rightMetaKey 77
-	int modKeyIndex[8] = { leftCtrlKey, leftShiftKey, leftAltKey, leftMetaKey, rightCtrlKey, rightShiftKey, rightAltKey, rightMetaKey };
-	
-	int pressCount = 0;
-	unsigned char outputKeys[6];
-	unsigned char lastOutputKeys[7];
-	bool lastRoundHadKeys = false;
-	unsigned char modKeys;
-	
-	while (*on){
-		leftCtrl = pressedKeys[leftCtrlKey];
-		leftShift = pressedKeys[leftShiftKey];
-		leftAlt = pressedKeys[leftAltKey];
-		leftMeta = pressedKeys[leftMetaKey];
-		rightCtrl = pressedKeys[rightCtrlKey];
-		rightShift = pressedKeys[rightShiftKey];
-		rightAlt = pressedKeys[rightAltKey];
-		rightMeta = pressedKeys[rightMetaKey];
-		
-		//reset press count
-		pressCount = 0;
-		for (int i = 0; i < 6; i++)
-			outputKeys[i] = 0;
-		
-		for (int i = 0; i < MAXKEYS; i++){			
-			//check for events
-			if (lastKeyStatus[i] && !pressedKeys[i] && keys[i].outputType == OUTPUTPROFILESWITCH){	//on key up
-				//switch profile
-				swapProfile(keys[i].output.c_str());
-			}
-			lastKeyStatus[i] = pressedKeys[i];
-			
-			//check for key presses
-			if (i == leftCtrlKey || i == leftShiftKey || i == leftAltKey || i == leftMetaKey || 
-				i == rightCtrlKey || i == rightShiftKey || i == rightAltKey || i == rightMetaKey){	//do not count modifier keys
-				continue;	
-			}
-			
-			if (pressedKeys[i] && keys[i].outputType == OUTPUTKEYOUT){
-				//add to output array
-				outputKeys[pressCount++] = bluetoothConn->getKeyCode(keys[i].output);
-				if (pressCount >= 6)
-					break;
-			}
-		}
-		
-		modKeys = bluetoothConn->getModSignal(leftCtrl, leftShift, leftAlt, leftMeta, rightCtrl, rightShift, rightAlt, rightMeta);
-		
-		//if only mod keys are pressed, then send the mod key code
-		if (pressCount == 0 && modKeys > 0){
-			for (int i = 0; i < 8; i++){
-				if (pressedKeys[modKeyIndex[i]]){
-					outputKeys[0] = bluetoothConn->getKeyCode(keys[modKeyIndex[i]].output);	//just send the one
-					break;
-				}
-			}
-		}
-		
-		//output to bluetooth:
-		if (pressCount > 0 || modKeys > 0 || lastRoundHadKeys){
-			bool notDifferent = true;
-			//compare last keys
-			if (lastOutputKeys[0] != modKeys){
-				notDifferent = false;
-			}
-			for (int i = 0; i < 6; i++){
-				if (lastOutputKeys[i+1] != outputKeys[i]){
-					notDifferent = false;
-					break;
-				}
-			}
-			if (!notDifferent){	//only output for new events
-				bluetoothConn->write(modKeys, outputKeys[0], outputKeys[1], outputKeys[2], outputKeys[3], outputKeys[4], outputKeys[5]);
-				bluetoothConn->write(modKeys, outputKeys[0], outputKeys[1], outputKeys[2], outputKeys[3], outputKeys[4], outputKeys[5]);
-			}
-			//set last keys
-			lastOutputKeys[0] = modKeys;
-			for (int i = 0; i < 6; i++){
-				lastOutputKeys[i+1] = outputKeys[i];
-			}
-		}
-		if (pressCount > 0 || modKeys > 0)
-			lastRoundHadKeys = true;
-		else
-			lastRoundHadKeys = false;
-		
-		//wait:
-		currentTime = SDL_GetTicks();
-		while (currentTime - lastTime < 1){	//1000 polls per second
-			currentTime = SDL_GetTicks();
-		}
-		lastTime = currentTime;
-		
-	}
-}
-
-//key assignment -----------------------------------------------------------------------
-int keyboard::assignKey(int keyID, int outputType, string outputString){
-	if (keyID >= MAXKEYS){
-		SDL_Log("Key assignment error: KeyID over %d found: %d", MAXKEYS, keyID);
-		return -1;
-	}
-	//set key output:
-	if (outputType <= OUTPUTPROFILESWITCH){
-		keys[keyID].outputType = outputType;
-		keys[keyID].output = outputString;
-	}
-	else {
-		SDL_Log("Key assignment error: output of unknown type: %d", outputType);
-		return -1;
-	}
-	
-	return 0;
-}
-
-int keyboard::textureKey(int keyID, int layoutType, string layoutString, float width, float height){
-	int keyIDRaw = keyID & 0xFF;
-	if (keyIDRaw >= MAXKEYS){
-		SDL_Log("Key assignment error: KeyID over %d found: %d", MAXKEYS, keyIDRaw);
-		return -1;
-	}
-	//set key texture
-		float centerX = static_cast<float>(keys[keyIDRaw].bounds.x + (keys[keyIDRaw].bounds.w / 2));
-		float centerY = static_cast<float>(keys[keyIDRaw].bounds.y + (keys[keyIDRaw].bounds.h / 2));
-		rectangle destRect = {
-					static_cast<int>(centerX - ((static_cast<float>(keys[keyIDRaw].bounds.w) / 2) * width)),
-					static_cast<int>(centerY - ((static_cast<float>(keys[keyIDRaw].bounds.h) / 2) * height)),
-					static_cast<int>(static_cast<float>(keys[keyIDRaw].bounds.w) * width),
-					static_cast<int>(static_cast<float>(keys[keyIDRaw].bounds.h) * height)
-		};
-	switch (layoutType){
-		case LAYOUTIMG:
-			//int drawImage(const char* src, int x, int y, int width, int height, int a);
-			if (inMainThread)
-				keyboardWindow->drawImage(layoutString.c_str(),
-							destRect.x, destRect.y, destRect.w, destRect.h, 
-							255, keyID);
-			else{
-				keyboardWindow->requestDrawImage(layoutString.c_str(),
-							destRect.x, destRect.y, destRect.w, destRect.h, 
-							255, keyID);
-				while (!keyboardWindow->asyncFunctionCompleted())
-					__asm__("nop");
-			}
-			break;
-		case LAYOUTTEXT:
-			//int drawText(const char* text, int x, int y, int width, int height, int r, int g, int b, int a);
-			if (inMainThread)
-				keyboardWindow->drawText(layoutString.c_str(), 
-							destRect.x, destRect.y, destRect.w, destRect.h, 
-							textColor.r, textColor.g, textColor.b, textColor.a,
-							keyID);
-			else{
-				keyboardWindow->requestDrawText(layoutString.c_str(), 
-							destRect.x, destRect.y, destRect.w, destRect.h, 
-							textColor.r, textColor.g, textColor.b, textColor.a,
-							keyID);
-				while (!keyboardWindow->asyncFunctionCompleted())
-					__asm__("nop");
-			}
-			break;
-		default:
-			SDL_Log("Key assignment error: layout of unknown type: %d", layoutType);
-			return -1;
-			break;
-	}
-	return 0;
-}
-
-int keyboard::rectKey(int keyID, int r, int g, int b, int a, float width, float height){
-	//draw rectangle centered on key rect
-	float centerX = static_cast<float>(keys[keyID].bounds.x + (keys[keyID].bounds.w / 2));
-	float centerY = static_cast<float>(keys[keyID].bounds.y + (keys[keyID].bounds.h / 2));
-	rectangle destRect = {
-				static_cast<int>(centerX - ((static_cast<float>(keys[keyID].bounds.w) / 2) * width)),
-				static_cast<int>(centerY - ((static_cast<float>(keys[keyID].bounds.h) / 2) * height)),
-				static_cast<int>(static_cast<float>(keys[keyID].bounds.w) * width),
-				static_cast<int>(static_cast<float>(keys[keyID].bounds.h) * height)
-	};
-	if (inMainThread)
-		return keyboardWindow->drawRect(destRect.x, destRect.y, destRect.w, destRect.h, r, g, b, a, keyID);
-	//else request async
-	keyboardWindow->requestDrawRect(destRect.x, destRect.y, destRect.w, destRect.h, r, g, b, a, keyID);
-	while (!keyboardWindow->asyncFunctionCompleted())
-		__asm__("nop");
-	return keyboardWindow->asyncOutput();
-}
-
-int keyboard::circleKey(int keyID, int radius, int segments, int r, int g, int b, int a){
-	if (inMainThread)
-		return keyboardWindow->drawCircle(keys[keyID].bounds.x + (keys[keyID].bounds.w / 2), 
-					keys[keyID].bounds.y + (keys[keyID].bounds.h / 2), radius, segments,
-					r, g, b, a, keyID);
-	//else request async
-	keyboardWindow->requestDrawCircle(keys[keyID].bounds.x + (keys[keyID].bounds.w / 2), 
-					keys[keyID].bounds.y + (keys[keyID].bounds.h / 2), radius, segments,
-					r, g, b, a, keyID);
-	while (!keyboardWindow->asyncFunctionCompleted())
-		__asm__("nop");
-	return keyboardWindow->asyncOutput();
-}
-
-int keyboard::assignKeyFont(const char* fontname){
-	return keyboardWindow->setFont(fontname);
-}
-int keyboard::assignKeyboardBackgroundColor(int r, int g, int b, int a){
-	if (r < 256 && g < 256 && b < 256 && a < 256)
-		keyboardWindow->setbackrgoundColor(r, g, b, a);
-	else {
-		SDL_Log("Color value over 255 detected");
-		return -1;
-	}
-	return 0;
-}
-
-int keyboard::assignTextColor(int r, int g, int b, int a){
-	if (r < 256 && g < 256 && b < 256 && a < 256)
-		textColor = {r, g, b, a};
-	else {
-		SDL_Log("Color value over 255 detected");
-		return -1;
-	}
-	return 0;
-}
-
-int keyboard::swapProfile(const char* newProfileFolderName){
-	keyboardWindow->setGraphicsLock(true);	//lock the graphics process to allow for async requests
-	while (keyboardWindow->isRendering())
-		__asm__("nop");	//wait for rendering to finish
-	return loadProfile(newProfileFolderName, false);	//does not run in main thread
-}
-
-int keyboard::loadProfile(const char* profileFolderName, bool mainThread){
-	inMainThread = mainThread;
-	//determine if the profile to load exists:
-	struct stat sb;
-	const char* profiles = "profiles/";
-	char* path = new char[strlen(profiles) + strlen(profileFolderName) + 1];
-	strcpy(path, profiles);
-	strcat(path, profileFolderName);
-	if (!(stat(path, &sb) == 0 && S_ISDIR(sb.st_mode))){
-		cout << "No profile folder with name: " << path << " found" << endl;
-		return -1;
-	}
-	cout << "Loading keyboard profile: " << path << endl;
-	
-	//determine if layout.prof is found
-	const char* profile = "/layout.prof";
-	char* profPath = new char[strlen(path) + strlen(profile) + 1];
-	strcpy(profPath, path);
-	strcat(profPath, profile);
-	ifstream file(profPath);
-	if (!file.good()){
-		cout << "No layout.prof file found in " << path << endl;
-		return -1;
-	}
-	cout << "Loading layout.prof..." << endl;
-	
-	//at this point it's okay to clear the graphics memory:
-	if (mainThread)
-		keyboardWindow->clearGraphicsMemory();
-	else{
-		cout << "non-main thread clearing" << endl;
-		keyboardWindow->requestClear();
-		while (!keyboardWindow->asyncFunctionCompleted())
-			__asm__("nop");
-	}
-	
-	//read file and update layout
-	string line;
-	int lineNumber = 1;
-	if (file.is_open()){
-		while(getline(file, line)){	//read in one line at a time
-			int result = parseLine(line);
-			switch (result){
-				case 1:
-					cout << "\033[33;1mError parsing layout.prof on line " << lineNumber << ", argument not recognized\033[0m" << endl;
-					break;
-				case 2:
-					cout << "\033[33;1mError parsing layout.prof on line " << lineNumber << ", incorrect number of parameters\033[0m" << endl;
-					break;
-				case 3:
-					cout << "\033[33;1mError parsing layout.prof on line " << lineNumber << ", argument types incorrect\033[0m" << endl;
-					break;
-				case 4:
-					cout << "\033[33;1mError parsing layout.prof on line " << lineNumber << ", error exucting requested function\033[0m" << endl;
-					break;
-				case 0:
-				default:
-					break;	//no errors
-					
-			}
-			lineNumber++;
-		}
-		file.close();
-	}
-	
-	//unlock graphics:
-	keyboardWindow->setGraphicsLock(false);
-	//profile loaded sucessfully
-	return 0;
-} 
-
-int keyboard::freeRect(int x, int y, int w, int h, int r, int g, int b, int a){
-	if (inMainThread)
-		return keyboardWindow->drawRect(x, y, w, h, r, g, b, a);
-		//else request async
-	keyboardWindow->requestDrawRect(x, y, w, h, r, g, b, a);
-	while (!keyboardWindow->asyncFunctionCompleted())
-		__asm__("nop");
-	return keyboardWindow->asyncOutput();
-}
-int keyboard::freeCircle(int x, int y, int radius, int segments, int r, int g, int b, int a){
-	if (inMainThread)
-		return keyboardWindow->drawCircle(x, y, radius, segments, r, g, b, a);
-	//else request async
-	keyboardWindow->requestDrawCircle(x, y, radius, segments, r, g, b, a);
-	while (!keyboardWindow->asyncFunctionCompleted())
-		__asm__("nop");
-	return keyboardWindow->asyncOutput();
-}
-
-int keyboard::freeText(int x, int y, const char* toWrite, float size, int r, int g, int b, int a){
-	if (keyboardWindow->writeText(toWrite, x, y, size, r, g, b, a) == nullptr)
-		return -1;
-	return 0;
-}
-	
-int keyboard::setKeyboardBGImg(const char* src){
-
-	if (inMainThread)
-		return keyboardWindow->setbackgroundImage(src);
-	//else request async
-	keyboardWindow->requestSetbackgroundImage(src);
-	while (!keyboardWindow->asyncFunctionCompleted())
-		__asm__("nop");
-	return keyboardWindow->asyncOutput();	
-}
-
-int keyboard::loadVideo(const char* filename, int x, int y, int w, int h){
-	return keyboardWindow->loadVideo(filename, x, y, w, h);
-}
-
-vector<string> keyboard::splitPreserveQuotes(const string& str){
-	vector<string> words;
-	string currentWord;
-	bool inQuotes = false;
-	
-	for (int i = 0; i < str.size(); i++){
-		char c = str[i];
-		if (c == '"'){
-			inQuotes = !inQuotes;
-		}
-		else if ((c == ' ' || c == '\t') && !inQuotes){
-			//split outside of quotes
-			if (!currentWord.empty()){
-				words.push_back(currentWord);
-				currentWord.clear();
-			}
-		}
-		else {
-			currentWord += c;
-		}
-	}
-	//push final word
-	if (!currentWord.empty())
-		words.push_back(currentWord);
-	return words;
-}
-
-int keyboard::loadCustomShader(const char* vertexShader, const char* fragmentShader, int shaderType){
-	if (inMainThread)
-		return keyboardWindow->loadCustomShaderProgram(vertexShader, fragmentShader, shaderType);
-	//else request async
-	keyboardWindow->requestCustomShader(vertexShader, fragmentShader, shaderType);
-	while (!keyboardWindow->asyncFunctionCompleted())
-		__asm__("nop");
-	return keyboardWindow->asyncOutput();
-}
-
-int keyboard::parseLine(string line){
-	//cout << line << endl;
-	
-	//formatting:
-		//comment					#
-		//assign key				K	keyID	n	s
-		//rectKey					R	keyID	n	n	n	n	f	f
-		//circleKey					C	keyID	n	n	n	n	n
-		//textureKey				T	keyID	n	s	f	f	o
-		//freeRect					r	n	n	n	n	n	n	n	n
-		//freeCircle				c	n	n	n	n	n	n	n	n
-		//freeText					W	n	n	s	f	n	n	n	n
-		//assignKeyFont				F	s
-		//assignTextColor			t	n	n	n	n
-		//assignBGImg				B	s
-		//assignBGColor				b	n	n	n	n
-		//loadShader for profile	S	s	s	n
-		//loadVideo					V	s	n	n	n	n
-		//key event
-	
-	//remove '\n'
-	line.erase(remove(line.begin(), line.end(), '\n'), line.end());
-	if (line.size() == 0)
-		return 0;	//blank line
-	//split line into parts
-	vector<string> parts;
-	parts = splitPreserveQuotes(line);
-	
-	//check if first part is recognized (switch case)
-	//check if number of arguments match
-	//check if argument types parse correctly
-	if (parts[0][0] == '#'){
-		return 0;	//comment
-	}
-	else if (parts[0] == "K"){	//assignKey(int keyID, int outputType, std::string outputString)
-		if (parts.size() != 4)
-			return 2;	//incorrect number of parameters
-		//translate parameters
-		int keyID;
-		int outputType;
-		try{
-			keyID = stoi(parts[1]);
-			outputType = stoi(parts[2]);
-		}
-		catch (const invalid_argument& e){
-			return 3;	//unable to convert to correct type
-		}
-		//run function
-		//cout << "running assignKey()" << endl;
-		if (assignKey(keyID, outputType, parts[3]) != 0)
-			return 4;	//error running function
-	}
-	else if (parts[0] == "R"){	//rectKey(int keyID, int r, int g, int b, int a, float width, float height);
-		if (parts.size() != 8)
-			return 2;	//incorrect number of parameters
-		//translate parameters
-		int keyID, r, g, b, a;
-		float width, height;
-		try{
-			keyID = stoi(parts[1]);
-			r = stoi(parts[2]);
-			g = stoi(parts[3]);
-			b = stoi(parts[4]);
-			a = stoi(parts[5]);
-			width = stof(parts[6]);
-			height = stof(parts[7]);
-		}
-		catch (const invalid_argument& e){
-			return 3;	//unable to convert to correct type
-		}
-		//run function
-		//cout << "running rectKey()" <<  endl;
-		if (rectKey(keyID, r, g, b, a, width, height) != 0)
-			return 4;	//error running function
-	}
-	else if (parts[0] == "C"){	//circleKey(int keyID, int radius, int segments, int r, int g, int b, int a);
-		if (parts.size() != 8)
-			return 2;	//incorrect number of parameters
-		//translate parameters
-		int keyID, radius, segments, r, g, b, a;
-		try{
-			keyID = stoi(parts[1]);
-			radius = stoi(parts[2]);
-			segments = stoi(parts[3]);
-			r = stoi(parts[4]);
-			g = stoi(parts[5]);
-			b = stoi(parts[6]);
-			a = stoi(parts[7]);
-		}
-		catch (const invalid_argument& e){
-			return 3;	//unable to convert to correct type
-		}
-		//run function
-		//cout << "running circleKey()" << endl;
-		if (circleKey(keyID, radius, segments, r, g, b, a) != 0)
-			return 4;	//error running function
-	}
-	else if (parts[0] == "T"){	//textureKey(int keyID, int layoutType, string layoutString, float width, float height);
-		if (!(parts.size() == 6 || parts.size() == 7))
-			return 2;	//incorrect number of parameters
-		//translate parameters
-		int keyID, layoutType, heldCondition;
-		float width, height;
-		try{
-			keyID = stoi(parts[1]);
-			layoutType = stoi(parts[2]);
-			width = stof(parts[4]);
-			height = stof(parts[5]);
-			if (parts.size() == 7)
-				heldCondition = stoi(parts[6]);
-			else
-				heldCondition = 0;
-		}
-		catch (const invalid_argument& e){
-			return 3;	//unable to convert to correct type
-		}
-		//run function
-		//cout << "running textureKey()" << endl;
-		if (textureKey(keyID | heldCondition, layoutType, parts[3], width, height) != 0)
-			return 4;	//error running function
-	}
-	else if (parts[0] == "r"){	//freeRect(int x, int y, int w, int h, int r, int g, int b, int a)
-		if (parts.size() != 9)
-			return 2;	//incorrect number of parameters
-		//translate parameters
-		int x, y, w, h, r, g, b, a;
-		try{
-			x = stoi(parts[1]);
-			y = stoi(parts[2]);
-			w = stoi(parts[3]);
-			h = stoi(parts[4]);
-			r = stoi(parts[5]);
-			g = stoi(parts[6]);
-			b = stoi(parts[7]);
-			a = stoi(parts[8]);
-		}
-		catch (const invalid_argument& e){
-			return 3;	//unable to convert to correct type
-		}
-		//run function
-		//cout << "running freeRect()" << endl;
-		if (freeRect(x, y, w, h, r, g, b, a) != 0)
-			return 4;	//error running function
-	}
-	else if (parts[0] == "c"){	//freeCircle(int x, int y, int radius, int segments, int r, int g, int b, int a)
-		if (parts.size() != 9)
-			return 2;	//incorrect number of parameters
-		//translate parameters
-		int x, y, radius, segments, r, g, b, a;
-		try{
-			x = stoi(parts[1]);
-			y = stoi(parts[2]);
-			radius = stoi(parts[3]);
-			segments = stoi(parts[4]);
-			r = stoi(parts[5]);
-			g = stoi(parts[6]);
-			b = stoi(parts[7]);
-			a = stoi(parts[8]);
-		}
-		catch (const invalid_argument& e){
-			return 3;	//unable to convert to correct type
-		}
-		//run function
-		//cout << "running freeCircle()" << endl;
-		if (freeCircle(x, y, radius, segments, r, g, b, a) != 0)
-			return 4;	//error running function
-	}
-	else if (parts[0] == "W"){	//freeText(int x, int y, const char* toWrite, float size, int r, int g, int b, int a)
-		if (parts.size() != 9)
-			return 2;	//incorrect number of parameters
-		//translate parameters
-		int x, y, r, g, b, a;
-		float size;
-		
-		try{
-			x = stoi(parts[1]);
-			y = stoi(parts[2]);
-			size = stof(parts[4]);
-			r = stoi(parts[5]);
-			g = stoi(parts[6]);
-			b = stoi(parts[7]);
-			a = stoi(parts[8]);
-		}
-		catch (const invalid_argument& e){
-			return 3;	//unable to convert to correct type
-		}
-		//run function
-		//cout << "running freeText()" << endl;
-		if (freeText(x, y, parts[3].c_str(), size, r, g, b, a) != 0)
-			return 4;	//error running function
-	}
-	else if (parts[0] == "F"){	//assignKeyFont(const char* fontname)
-		if (parts.size() != 2)
-			return 2;	//incorrect number of parameters
-		//run function
-		//cout << "running assignKeyFont()" << endl;
-		if (assignKeyFont(parts[1].c_str()) != 0)
-			return 4;	//error running function
-	}
-	else if (parts[0] == "t"){	//assignTextColor(int r, int g, int b, int a)
-		if (parts.size() != 5)
-			return 2;	//incorrect number of parameters
-		//translate parameters
-		int r, g, b, a;
-		
-		try{
-			r = stoi(parts[1]);
-			g = stoi(parts[2]);
-			b = stoi(parts[3]);
-			a = stoi(parts[4]);
-		}
-		catch (const invalid_argument& e){
-			return 3;	//unable to convert to correct type
-		}
-		//run function
-		//cout << "running assignTextColor()"<< endl;
-		if (assignTextColor(r, g, b, a) != 0)
-			return 4;	//error running function
-	}
-	else if (parts[0] == "B"){	//setKeyboardBGImg(const char* txt)
-		if (parts.size() != 2)
-			return 2;	//incorrect number of parameters
-		//run function
-		//cout << "running setKeyboardBGImg()"<< endl;
-		if (setKeyboardBGImg(parts[1].c_str()) != 0)
-			return 4;	//error running function
-	}
-	else if (parts[0] == "b"){	//assignKeyboardBackgroundColor(int r, int g, int b, int a)
-		if (parts.size() != 5)
-			return 2;	//incorrect number of parameters
-		//translate parameters
-		int r, g, b, a;
-		try{
-			r = stoi(parts[1]);
-			g = stoi(parts[2]);
-			b = stoi(parts[3]);
-			a = stoi(parts[4]);
-		}
-		catch (const invalid_argument& e){
-			return 3;	//unable to convert to correct type
-		}
-		//run function
-		//cout << "running assignKeyboardBackgroundColor()"<< endl;
-		if (assignKeyboardBackgroundColor(r, g, b, a) != 0)
-			return 4;	//error running function
-	}
-	else if (parts[0] == "S"){	//loadCustomShader(const char* vertexShader, const char* fragmentShader, int shaderType)
-		if (parts.size() != 4)
-			return 2;	//incorrect number of parameters
-		//translate parameters
-		int shaderType;
-		try{
-			shaderType = stoi(parts[3]);
-		}
-		catch (const invalid_argument& e){
-			return 3;	//unable to convert to correct type
-		}
-		//run function
-		//cout << "running loadCustomShader()"<< endl;
-		if (loadCustomShader(parts[1].c_str(), parts[2].c_str(), shaderType) != 0)
-			return 4;	//error running function
-	}
-	else if (parts[0] == "V"){	//loadVideo(const char* filename, int x, int y, int w, int h)
-		if (parts.size() != 6)
-			return 2;	//incorrect number of parameters
-		//translate parameters
-		int x, y, w, h;
-		try{
-			x = stoi(parts[2]);
-			y = stoi(parts[3]);
-			w = stoi(parts[4]);
-			h = stoi(parts[5]);
-		}
-		catch (const invalid_argument& e){
-			return 3;	//unable to convert to correct type
-		}
-		//run function
-		//cout << "running loadVideo()"<< endl;
-		if (loadVideo(parts[1].c_str(), x, y, w, h) != 0)
-			return 4;	//error running function
-	}
-	else{
-		return 1;	//argument not recognized
-	}
-	
-	//clear memory:
-	parts.clear();
-	parts.shrink_to_fit();
-	return 0;
 }
