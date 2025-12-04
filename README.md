@@ -1,45 +1,42 @@
 # The open source all-screen keyboard
-The first open source all-screen keyboard. This repository contains all the digital files used to produce the all-screen keyboard created by Inkbox Software in this video: 
+The first open source all-screen keyboard. This repository contains all the digital files used to produce the all-screen keyboard created by Inkbox Software.
 
-## Future of the all-screen keyboard?
-The goal of this project is to create a robust DIY guide for creating an all-screen keyboard. Currentyle there are a couple of software issues that need to be resolved, but more importantly the keys and frames themselves need to be remolded in order to make them more suitable for viewing and mass production. Members of the community are looking towards how to create a cheaper version out of some other material than 3D printed resin. Once we solve these issues, version 2 will be released to the public via this repository. 
+## Material List
+* Raspberry Pi 4 and up. (Program requires use of OpenGL 3 only supported by this generation of Pis onward)
+* 14.1" wide screen touch display
+* Pi Pico
+* Battery (optional)
+* Case and key files found in 3Dmodels folder
+* Magnets
+* Acrylic cores
+* Various wires and cables to put everything together
 
-## Could I still make my own today?
-Well, you probably don't want to. As of today (2025/7/11) the keys are much too tall, and so not all the keys are able to be viewed at once. But for reference here is the list of hardware I used:
-* Orange Pi 5 Ultra (any Orange Pi 5 could be a drop in replacement, well, you may have to change which pins you use)
-* PCB found in this project's PCB folder
-* Top Shell and keys printed in transparent resin
-* Bottom shell printed in regular PLA (available as a single piece or multiple parts for printing at home)
-
-Currently start up requires three steps, starting the python program, setting the bluetooth advertisement appearance, and then running the main keyboard program. 
-
-### To enable SPI on the Orange Pi 5:
-
-open **/boot/extlinux/extlinux.conf**
-
-Add the following text
+### To enable SPI on Raspberry Pi running Ubuntu
+Due to the 3840x1100 wide display resolution, Raspbian cannot be used. Ubutuntu then requires a little more settup to access all the Pi's features. 
+In /boot/firmware/config.txt place the following text
 ```
-FDTOVERLAYS /dtbs/rockchip/overlay/rk3588-spi0-m2-cs0-cs1-spidev.dtbo
-/dtbs/rockchip/overlay/rk3588-spi1-m1-cs0-spidev.dtbo
-/dtbs/rockchip/overlay/rk3588-spi4-m2-cs0-spidev.dtbo
+enable_uart=1
+dtoverlays=uart0-pi5
 ```
+Restart, and serial is now accessible via /dev/ttyAMA0
+Note this is different from Raspbian's serial file /dev/serial0
 
-### Running the bluetooth python program:
-Ensure you have the proper dependencies installed
+### To invert touch screeen output
+Add the following rule as touchscreen.rules in /etc/udev/rules.d
 ```
-cd keyboard
-make py
+ACTION=="add|change", KERNEL=="event*", ATTRS{name}=="ILITEK ILITEK-TP", ENV{LIBINPUT_CALIBRATION_MATRIX}="-1 0 1 0 -1 1 0 0 1"
 ```
 
-### Starting bluetooth:
-Setting the appearance to 961 will have the Pi show up as a keyboard. 
+### Installing required libraries
+To install wiringpi go to the github repo (https://github.com/WiringPi/WiringPi) and under _Releases_ download the latest release wiringpi_X.XX_arm64.deb
+Install with
 ```
-bluetoothctl 
-discoverable on
-pairable on
-advertise on
-menu advertise
-appearance 961
+sudo apt install wiringpi_x.xx_arm64.deb
+```
+
+The rest of the required libraries can be installed with
+```
+sudo apt install build-essential libgles2-mesa-dev libsdl2-dev libsdl2-image-dev libsdl2-ttf-dev libsdl2-ttf-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libavfilter-dev
 ```
 
 ### Starting the main keyboard program
@@ -52,5 +49,22 @@ Then run with
 ```
 make run
 ```
+or
+```
+sudo ./keyboard
+```
+
+The initial profile to load should be written in the _startup_ file.
+
+### Designing Plugins
+A plugin template has been created and stored in keyboard/src/plugins-dev/
+Edit the plugin.cpp program to function as desired then compile your plugin via
+```
+make plugin name=myCustomPlugin src=plugin
+```
+
+### Keyboard Profile online designer
+The latest version of this designer is hosted at https://notin.tokyo/ASK
+The code for this website is stored in keyboard/profileDesigner
 
 
