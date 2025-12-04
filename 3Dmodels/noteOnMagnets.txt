@@ -1,9 +1,0 @@
-Magnet hole size notes:
-
-magnets used are 5.0mm in diameter, but to fit them in plastic holes:
-	5.2mm for tight fit (diameter)
-	5.25 for a bit looser
-	anything smaller and they won't go in
-	anything larger and they fall out (5.3 sits well, but will fall out with a shake)
-	recommend to use 5.25mm diameter holes
-depth of hole should be 0.25mm + the height of the magnet
