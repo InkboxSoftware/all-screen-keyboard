@@ -173,7 +173,8 @@ class key{
 		{"9", 		KC_9},
 		{"0", 		KC_0},
 		{"ENTER", 	KC_ENTER},
-		{"ESCPACE", KC_ESCAPE},
+		{"ESCAPE",  KC_ESCAPE},
+		{"ESCPACE", KC_ESCAPE}, // typo kept for compatibility
 		{"BACKSPACE", KC_BACKSPACE},
 		{"TAB", 	KC_TAB},
 		{"SPACE", 	KC_SPACE},
@@ -210,7 +211,8 @@ class key{
 		{"PAGE_UP", KC_PAGE_UP},
 		{"DELETE", KC_DELETE},
 		{"END", KC_END},
-		{"PACE_DOWN", KC_PAGE_DOWN},
+		{"PAGE_DOWN", KC_PAGE_DOWN},
+		{"PACE_DOWN", KC_PAGE_DOWN}, // typo kept for compatibility
 		{"RIGHT", KC_RIGHT},
 		{"LEFT", KC_LEFT},
 		{"DOWN", KC_DOWN},
@@ -265,7 +267,7 @@ class key{
 		{"LOCKING_CAPS_LOCK", KC_LOCKING_CAPS_LOCK},
 		{"LOCKING_NUM_LOCK", KC_LOCKING_NUM_LOCK},
 		{"LOCKING_SCROLL_LOCK", KC_LOCKING_SCROLL_LOCK},
-		{"COMMA", KC_KP_COMMA},
+		{"KP_COMMA", KC_KP_COMMA},
 		{"KP_EQUAL", KC_KP_EQUAL_AS400},
 		{"INTERNATIONAL_1", KC_INTERNATIONAL_1},
 		{"INTERNATIONAL_2", KC_INTERNATIONAL_2},
