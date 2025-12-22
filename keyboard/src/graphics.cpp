@@ -973,7 +973,9 @@ void window::playVideo(){
 	avcodec_parameters_to_context(codecCtx, formatCtx->streams[videoStreamIndex]->codecpar);
 	
 	//enable flags
+#ifdef AV_CODEC_FLAG_RECON_FRAME
 	codecCtx->flags |= AV_CODEC_FLAG_RECON_FRAME;
+#endif
 	codecCtx->pix_fmt = AV_PIX_FMT_NV12;
 	if (avcodec_open2(codecCtx, codec, nullptr) < 0){
 		cerr << "failed to open codec" << endl;
