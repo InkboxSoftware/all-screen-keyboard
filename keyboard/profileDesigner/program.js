@@ -1434,215 +1434,447 @@ function newKeyboardANSI(askName){
 			newKeyboard(keyboardName);
 		else
 			return;
-			
-		keyboard.layoutName = keyboardName;
 	}
-	
-	let leftXoffset = 18;
-	let topYoffset = 5;
-	let keyGap = getKeyGap();
-	//first row of keyboard.keys:
-	let fnKeyGap = 100;
-		keyboard.keys.push(new key(defaultZ(), leftXoffset, topYoffset, 
-		defaultKeySize(), defaultKeySize(), defaultIsRect(),	//ESC
-		defaultColor(), defaultOutputType(), defaultOutputValue(), false, false, "", 
-				-1, -1, -1, blankModType(), blankModText(), blankModShader(), blankOutputValue()));
-				
-	for (let i = 0; i < 4; i++){
-		keyboard.keys.push(new key(defaultZ(), leftXoffset + defaultKeySize()*2 + keyGap*2 + (defaultKeySize() + keyGap) * i, topYoffset, 
-		defaultKeySize(), defaultKeySize(), defaultIsRect(),
-		defaultColor(), defaultOutputType(), defaultOutputValue(), false, false, "", 
-				-1, -1, -1, blankModType(), blankModText(), blankModShader(), blankOutputValue()));
-	}
-	for (let i = 0; i < 4; i++){
-		keyboard.keys.push(new key(defaultZ(), fnKeyGap + leftXoffset + defaultKeySize()*6 + keyGap*5.5 + (defaultKeySize() + keyGap) * i, topYoffset, 
-		defaultKeySize(), defaultKeySize(), defaultIsRect(),
-		defaultColor(), defaultOutputType(), defaultOutputValue(), false, false, "", 
-				-1, -1, -1, blankModType(), blankModText(), blankModShader(), blankOutputValue()));
-	}
-	for (let i = 0; i < 4; i++){
-		keyboard.keys.push(new key(defaultZ(), fnKeyGap*2 + leftXoffset + defaultKeySize()*10 + keyGap*9 + (defaultKeySize() + keyGap) * i, topYoffset, 
-		defaultKeySize(), defaultKeySize(), defaultIsRect(),
-		defaultColor(), defaultOutputType(), defaultOutputValue(), false, false, "", 
-				-1, -1, -1, blankModType(), blankModText(), blankModShader(), blankOutputValue()));
-	}
-	//second row:
-	for (let i = 0; i < 13; i++){
-		keyboard.keys.push(new key(defaultZ(), leftXoffset + (defaultKeySize() + keyGap) * i, defaultKeySize() + keyGap, 
-		defaultKeySize(), defaultKeySize(), defaultIsRect(),
-		defaultColor(), defaultOutputType(), defaultOutputValue(), false, false, "", 
-				-1, -1, -1, blankModType(), blankModText(), blankModShader(), blankOutputValue()));
-	}
-	let deleteKeyWidth = 365;
-		keyboard.keys.push(new key(defaultZ(), leftXoffset + (defaultKeySize() + keyGap) * 13, defaultKeySize() + keyGap, 
-		deleteKeyWidth, defaultKeySize(), defaultIsRect(),
-		defaultColor(), defaultOutputType(), defaultOutputValue(), false, false, "", 
-				-1, -1, -1, blankModType(), blankModText(), blankModShader(), blankOutputValue()));
-	//third row:
-	let tabKeyWidth = 268;
-		keyboard.keys.push(new key(defaultZ(), leftXoffset, (defaultKeySize() + keyGap) * 2, 
-		tabKeyWidth, defaultKeySize(), defaultIsRect(),
-		defaultColor(), defaultOutputType(), defaultOutputValue(), false, false, "", 
-				-1, -1, -1, blankModType(), blankModText(), blankModShader(), blankOutputValue()));
-	for (let i = 0; i < 12; i++){
-		keyboard.keys.push(new key(defaultZ(), leftXoffset + tabKeyWidth + defaultKeySize() * i + keyGap * (i+1), (defaultKeySize() + keyGap) * 2, 
-		defaultKeySize(), defaultKeySize(), defaultIsRect(),
-		defaultColor(), defaultOutputType(), defaultOutputValue(), false, false, "", 
-				-1, -1, -1, blankModType(), blankModText(), blankModShader(), blankOutputValue()));
-	}
-		keyboard.keys.push(new key(defaultZ(), leftXoffset + tabKeyWidth + defaultKeySize()*12 + keyGap*13, (defaultKeySize() + keyGap) * 2, 
-		tabKeyWidth, defaultKeySize(), defaultIsRect(),
-		defaultColor(), defaultOutputType(), defaultOutputValue(), false, false, "", 
-				-1, -1, -1, blankModType(), blankModText(), blankModShader(), blankOutputValue()));
 
-	//fourth row:
-	let capsKeyWidth = 320;
-	let enterKeyWidth = 404;
-		keyboard.keys.push(new key(defaultZ(), leftXoffset, (defaultKeySize() + keyGap) * 3, 
-		capsKeyWidth, defaultKeySize(), defaultIsRect(),
-		defaultColor(), defaultOutputType(), defaultOutputValue(), false, false, "", 
-				-1, -1, -1, blankModType(), blankModText(), blankModShader(), blankOutputValue()));
-	for (let i = 0; i < 11; i++){
-		keyboard.keys.push(new key(defaultZ(), leftXoffset + capsKeyWidth + defaultKeySize() * i + keyGap * (i+1), (defaultKeySize() + keyGap) * 3, 
-		defaultKeySize(), defaultKeySize(), defaultIsRect(),
-		defaultColor(), defaultOutputType(), defaultOutputValue(), false, false, "", 
-				-1, -1, -1, blankModType(), blankModText(), blankModShader(), blankOutputValue()));
+	const keys = [
+		[18,5,175,175,"ESCAPE"],
+		[394,5,175,175,"F1"],
+		[582,5,175,175,"F2"],
+		[770,5,175,175,"F3"],
+		[958,5,175,175,"F4"],
+		[1240,5,175,175,"F5"],
+		[1428,5,175,175,"F6"],
+		[1616,5,175,175,"F7"],
+		[1804,5,175,175,"F8"],
+		[2086,5,175,175,"F9"],
+		[2274,5,175,175,"F10"],
+		[2462,5,175,175,"F11"],
+		[2650,5,175,175,"F12"],
+		[18,193,175,175,"GRAVE"],
+		[206,193,175,175,"1"],
+		[394,193,175,175,"2"],
+		[582,193,175,175,"3"],
+		[770,193,175,175,"4"],
+		[958,193,175,175,"5"],
+		[1146,193,175,175,"6"],
+		[1334,193,175,175,"7"],
+		[1522,193,175,175,"8"],
+		[1710,193,175,175,"9"],
+		[1898,193,175,175,"0"],
+		[2086,193,175,175,"MINUS"],
+		[2274,193,175,175,"EQUAL"],
+		[2462,193,363,175,"BACKSPACE"],
+		[18,381,269,175,"TAB"],
+		[300,381,175,175,"Q"],
+		[488,381,175,175,"W"],
+		[676,381,175,175,"E"],
+		[864,381,175,175,"R"],
+		[1052,381,175,175,"T"],
+		[1240,381,175,175,"Y"],
+		[1428,381,175,175,"U"],
+		[1616,381,175,175,"I"],
+		[1804,381,175,175,"O"],
+		[1992,381,175,175,"P"],
+		[2180,381,175,175,"LEFT_BRACKET"],
+		[2368,381,175,175,"RIGHT_BRACKET"],
+		[2556,381,269,175,"BACKSLASH"],
+		[18,569,316,175,"CAPS_LOCK"],
+		[347,569,175,175,"A"],
+		[535,569,175,175,"S"],
+		[723,569,175,175,"D"],
+		[911,569,175,175,"F"],
+		[1099,569,175,175,"G"],
+		[1287,569,175,175,"H"],
+		[1475,569,175,175,"J"],
+		[1663,569,175,175,"K"],
+		[1851,569,175,175,"L"],
+		[2039,569,175,175,"SEMICOLON"],
+		[2227,569,175,175,"QUOTE"],
+		[2415,569,410,175,"ENTER"],
+		[18,757,410,175,"LEFT_SHIFT"],
+		[441,757,175,175,"Z"],
+		[629,757,175,175,"X"],
+		[817,757,175,175,"C"],
+		[1005,757,175,175,"V"],
+		[1193,757,175,175,"B"],
+		[1381,757,175,175,"N"],
+		[1569,757,175,175,"M"],
+		[1757,757,175,175,"COMMA"],
+		[1945,757,175,175,"DOT"],
+		[2133,757,175,175,"SLASH"],
+		[2321,757,504,175,"RIGHT_SHIFT"],
+		[18,945,222,175,"LEFT_CTRL"],
+		[253,945,222,175,"LEFT_GUI"],
+		[488,945,222,175,"LEFT_ALT"],
+		[723,945,1162,175,"SPACE"],
+		[1898,945,222,175,"RIGHT_ALT"],
+		[2133,945,222,175,"RIGHT_GUI"],
+		[2368,945,222,175,"RIGHT_CTRL"],
+		[2603,945,222,175,"FN"]
+	];
+	for (const k of keys) {
+		keyboard.keys.push(new key(
+			defaultZ(), k[0], k[1], k[2], k[3], defaultIsRect(),
+			defaultColor(), defaultOutputType(), k[4], false, false, "", -1, -1, -1,
+			blankModType(), blankModText(), blankModShader(), blankOutputValue()));
 	}
-		keyboard.keys.push(new key(defaultZ(), leftXoffset + capsKeyWidth + defaultKeySize()*11 + keyGap*12, (defaultKeySize() + keyGap) * 3, 
-		enterKeyWidth, defaultKeySize(), defaultIsRect(),
-		defaultColor(), defaultOutputType(), defaultOutputValue(), false, false, "", 
-				-1, -1, -1, blankModType(), blankModText(), blankModShader(), blankOutputValue()));
-	
-	//fifth row:
-	let shiftLKeyWidth = enterKeyWidth;225, 126
-	let shiftRKeyWidth = 504;
-		keyboard.keys.push(new key(defaultZ(), leftXoffset, (defaultKeySize() + keyGap) * 4, 
-		shiftLKeyWidth, defaultKeySize(), defaultIsRect(),
-		defaultColor(), defaultOutputType(), defaultOutputValue(), false, false, "", 
-				-1, -1, -1, blankModType(), blankModText(), blankModShader(), blankOutputValue()));
-	for (let i = 0; i < 10; i++){
-		keyboard.keys.push(new key(defaultZ(), leftXoffset + shiftLKeyWidth + defaultKeySize() * i + keyGap * (i+1), (defaultKeySize() + keyGap) * 4, 
-		defaultKeySize(), defaultKeySize(), defaultIsRect(),
-		defaultColor(), defaultOutputType(), defaultOutputValue(), false, false, "", 
-				-1, -1, -1, blankModType(), blankModText(), blankModShader(), blankOutputValue()));
-	}
-		keyboard.keys.push(new key(defaultZ(), leftXoffset + shiftLKeyWidth + defaultKeySize()*10 + keyGap*11, (defaultKeySize() + keyGap) * 4, 
-		shiftRKeyWidth, defaultKeySize(), defaultIsRect(),
-		defaultColor(), defaultOutputType(), defaultOutputValue(), false, false, "", 
-				-1, -1, -1, blankModType(), blankModText(), blankModShader(), blankOutputValue()));
-	
-	//sixth row:
-	let modKeyWidth = 225; 
-	let spaceKeyWidth = 1136;
-	for (let i = 0; i < 3; i++){
-		keyboard.keys.push(new key(defaultZ(), leftXoffset + (modKeyWidth + keyGap) * i, (defaultKeySize() + keyGap) * 5, 
-		modKeyWidth, defaultKeySize(), defaultIsRect(),
-		defaultColor(), defaultOutputType(), defaultOutputValue(), false, false, "", 
-				-1, -1, -1, blankModType(), blankModText(), blankModShader(), blankOutputValue()));
-	}
-		keyboard.keys.push(new key(defaultZ(), leftXoffset + (modKeyWidth + keyGap) * 3, (defaultKeySize() + keyGap) * 5, 
-		spaceKeyWidth, defaultKeySize(), defaultIsRect(),
-		defaultColor(), defaultOutputType(), defaultOutputValue(), false, false, "", 
-				-1, -1, -1, blankModType(), blankModText(), blankModShader(), blankOutputValue()));
-				
-	for (let i = 0; i < 4; i++){
-		keyboard.keys.push(new key(defaultZ(), leftXoffset + (modKeyWidth + keyGap) * 3 + spaceKeyWidth + modKeyWidth * i + keyGap * (i+1), (defaultKeySize() + keyGap) * 5, 
-		modKeyWidth, defaultKeySize(), defaultIsRect(),
-		defaultColor(), defaultOutputType(), defaultOutputValue(), false, false, "", 
-				-1, -1, -1, blankModType(), blankModText(), blankModShader(), blankOutputValue()));
-	}
-	
-	//key output values:
-	//row 1
-	let k = 0;
-	keyboard.keys[k++].outputValue = "ESCAPE";
-	keyboard.keys[k++].outputValue = "F1";
-	keyboard.keys[k++].outputValue = "F2";
-	keyboard.keys[k++].outputValue = "F3";
-	keyboard.keys[k++].outputValue = "F4";
-	keyboard.keys[k++].outputValue = "F5";
-	keyboard.keys[k++].outputValue = "F6";
-	keyboard.keys[k++].outputValue = "F7";
-	keyboard.keys[k++].outputValue = "F8";
-	keyboard.keys[k++].outputValue = "F9";
-	keyboard.keys[k++].outputValue = "F10";
-	keyboard.keys[k++].outputValue = "F11";
-	keyboard.keys[k++].outputValue = "F12";
-	//row 2
-	keyboard.keys[k++].outputValue = "GRAVE";
-	keyboard.keys[k++].outputValue = "1";
-	keyboard.keys[k++].outputValue = "2";
-	keyboard.keys[k++].outputValue = "3";
-	keyboard.keys[k++].outputValue = "4";
-	keyboard.keys[k++].outputValue = "5";
-	keyboard.keys[k++].outputValue = "6";
-	keyboard.keys[k++].outputValue = "7";
-	keyboard.keys[k++].outputValue = "8";
-	keyboard.keys[k++].outputValue = "9";
-	keyboard.keys[k++].outputValue = "0";
-	keyboard.keys[k++].outputValue = "MINUS";
-	keyboard.keys[k++].outputValue = "EQUAL";
-	keyboard.keys[k++].outputValue = "BACKSPACE";
-	//row 3
-	keyboard.keys[k++].outputValue = "TAB";
-	keyboard.keys[k++].outputValue = "Q";
-	keyboard.keys[k++].outputValue = "W";
-	keyboard.keys[k++].outputValue = "E";
-	keyboard.keys[k++].outputValue = "R";
-	keyboard.keys[k++].outputValue = "T";
-	keyboard.keys[k++].outputValue = "Y";
-	keyboard.keys[k++].outputValue = "U";
-	keyboard.keys[k++].outputValue = "I";
-	keyboard.keys[k++].outputValue = "O";
-	keyboard.keys[k++].outputValue = "P";
-	keyboard.keys[k++].outputValue = "LEFT_BRACKET";
-	keyboard.keys[k++].outputValue = "RIGHT_BRACKET";
-	keyboard.keys[k++].outputValue = "BACKSLASH";
-	//row 4
-	keyboard.keys[k++].outputValue = "CAPS_LOCK";
-	keyboard.keys[k++].outputValue = "A";
-	keyboard.keys[k++].outputValue = "S";
-	keyboard.keys[k++].outputValue = "D";
-	keyboard.keys[k++].outputValue = "F";
-	keyboard.keys[k++].outputValue = "G";
-	keyboard.keys[k++].outputValue = "H";
-	keyboard.keys[k++].outputValue = "J";
-	keyboard.keys[k++].outputValue = "K";
-	keyboard.keys[k++].outputValue = "L";
-	keyboard.keys[k++].outputValue = "SEMICOLON";
-	keyboard.keys[k++].outputValue = "QUOTE";
-	keyboard.keys[k++].outputValue = "ENTER";
-	//row 5
-	keyboard.keys[k++].outputValue = "LEFT_SHIFT";
-	keyboard.keys[k++].outputValue = "Z";
-	keyboard.keys[k++].outputValue = "X";
-	keyboard.keys[k++].outputValue = "C";
-	keyboard.keys[k++].outputValue = "V";
-	keyboard.keys[k++].outputValue = "B";
-	keyboard.keys[k++].outputValue = "N";
-	keyboard.keys[k++].outputValue = "M";
-	keyboard.keys[k++].outputValue = "COMMA";
-	keyboard.keys[k++].outputValue = "DOT";
-	keyboard.keys[k++].outputValue = "SLASH";
-	keyboard.keys[k++].outputValue = "RIGHT_SHIFT";
-	//row 6
-	keyboard.keys[k++].outputValue = "LEFT_CTRL";
-	keyboard.keys[k++].outputValue = "LEFT_GUI";
-	keyboard.keys[k++].outputValue = "LEFT_ALT";
-	keyboard.keys[k++].outputValue = "SPACE";
-	keyboard.keys[k++].outputValue = "RIGHT_ALT";
-	keyboard.keys[k++].outputValue = "RIGHT_GUI";
-	keyboard.keys[k++].outputValue = "RIGHT_CTRL";
-	keyboard.keys[k++].outputValue = "FN";
-				
+
 	renderKeys();
 	openGlobalParameters();
 }
 
-function newKeyboardISO(){
-	console.log('ISO keyboard');
+function newKeyboardISO(askName){
 	closeKey();
-	keyboard.keys = new Array;
+	closeGlobalParameters();
+	console.log('ISO keyboard');
+	if (askName){
+		let keyboardName = prompt("New Keyboard Layout Name:");
+		if (keyboardName != null && keyboardName.length > 0)
+			newKeyboard(keyboardName);
+		else
+			return;
+	}
+
+	const keys = [
+		[18,5,175,175,"ESCAPE"],
+		[394,5,175,175,"F1"],
+		[582,5,175,175,"F2"],
+		[770,5,175,175,"F3"],
+		[958,5,175,175,"F4"],
+		[1240,5,175,175,"F5"],
+		[1428,5,175,175,"F6"],
+		[1616,5,175,175,"F7"],
+		[1804,5,175,175,"F8"],
+		[2086,5,175,175,"F9"],
+		[2274,5,175,175,"F10"],
+		[2462,5,175,175,"F11"],
+		[2650,5,175,175,"F12"],
+		[18,193,175,175,"GRAVE"],
+		[206,193,175,175,"1"],
+		[394,193,175,175,"2"],
+		[582,193,175,175,"3"],
+		[770,193,175,175,"4"],
+		[958,193,175,175,"5"],
+		[1146,193,175,175,"6"],
+		[1334,193,175,175,"7"],
+		[1522,193,175,175,"8"],
+		[1710,193,175,175,"9"],
+		[1898,193,175,175,"0"],
+		[2086,193,175,175,"MINUS"],
+		[2274,193,175,175,"EQUAL"],
+		[2462,193,363,175,"BACKSPACE"],
+		[18,381,269,175,"TAB"],
+		[300,381,175,175,"Q"],
+		[488,381,175,175,"W"],
+		[676,381,175,175,"E"],
+		[864,381,175,175,"R"],
+		[1052,381,175,175,"T"],
+		[1240,381,175,175,"Y"],
+		[1428,381,175,175,"U"],
+		[1616,381,175,175,"I"],
+		[1804,381,175,175,"O"],
+		[1992,381,175,175,"P"],
+		[2180,381,175,175,"LEFT_BRACKET"],
+		[2368,381,175,175,"RIGHT_BRACKET"],
+		[18,569,316,175,"CAPS_LOCK"],
+		[347,569,175,175,"A"],
+		[535,569,175,175,"S"],
+		[723,569,175,175,"D"],
+		[911,569,175,175,"F"],
+		[1099,569,175,175,"G"],
+		[1287,569,175,175,"H"],
+		[1475,569,175,175,"J"],
+		[1663,569,175,175,"K"],
+		[1851,569,175,175,"L"],
+		[2039,569,175,175,"SEMICOLON"],
+		[2227,569,175,175,"QUOTE"],
+		[2415,569,175,175,"NONUS_HASH"],
+		[2556,381,269,175,"ENTER"],
+		[2603,556,222,188,"ENTER"],
+		[18,757,222,175,"LEFT_SHIFT"],
+		[253,757,175,175,"NONUS_BACKSLASH"],
+		[441,757,175,175,"Z"],
+		[629,757,175,175,"X"],
+		[817,757,175,175,"C"],
+		[1005,757,175,175,"V"],
+		[1193,757,175,175,"B"],
+		[1381,757,175,175,"N"],
+		[1569,757,175,175,"M"],
+		[1757,757,175,175,"COMMA"],
+		[1945,757,175,175,"DOT"],
+		[2133,757,175,175,"SLASH"],
+		[2321,757,504,175,"RIGHT_SHIFT"],
+		[18,945,222,175,"LEFT_CTRL"],
+		[253,945,222,175,"LEFT_GUI"],
+		[488,945,222,175,"LEFT_ALT"],
+		[723,945,1162,175,"SPACE"],
+		[1898,945,222,175,"RIGHT_ALT"],
+		[2133,945,222,175,"RIGHT_GUI"],
+		[2368,945,222,175,"RIGHT_CTRL"],
+		[2603,945,222,175,"FN"]
+	];
+	for (const k of keys) {
+		keyboard.keys.push(new key(
+			defaultZ(), k[0], k[1], k[2], k[3], defaultIsRect(),
+			defaultColor(), defaultOutputType(), k[4], false, false, "", -1, -1, -1,
+			blankModType(), blankModText(), blankModShader(), blankOutputValue()));
+	}
+
+	renderKeys();
+	openGlobalParameters();
+}
+
+function newKeyboardJIS(askName){
+	closeKey();
+	closeGlobalParameters();
+	console.log('JIS keyboard');
+	if (askName){
+		let keyboardName = prompt("New Keyboard Layout Name:");
+		if (keyboardName != null && keyboardName.length > 0)
+			newKeyboard(keyboardName);
+		else
+			return;
+	}
+
+	const keys = [
+		[18,5,175,175,"ESCAPE"],
+		[394,5,175,175,"F1"],
+		[582,5,175,175,"F2"],
+		[770,5,175,175,"F3"],
+		[958,5,175,175,"F4"],
+		[1240,5,175,175,"F5"],
+		[1428,5,175,175,"F6"],
+		[1616,5,175,175,"F7"],
+		[1804,5,175,175,"F8"],
+		[2086,5,175,175,"F9"],
+		[2274,5,175,175,"F10"],
+		[2462,5,175,175,"F11"],
+		[2650,5,175,175,"F12"],
+		[18,193,175,175,"GRAVE"],
+		[206,193,175,175,"1"],
+		[394,193,175,175,"2"],
+		[582,193,175,175,"3"],
+		[770,193,175,175,"4"],
+		[958,193,175,175,"5"],
+		[1146,193,175,175,"6"],
+		[1334,193,175,175,"7"],
+		[1522,193,175,175,"8"],
+		[1710,193,175,175,"9"],
+		[1898,193,175,175,"0"],
+		[2086,193,175,175,"MINUS"],
+		[2274,193,175,175,"EQUAL"],
+		[2462,193,175,175,"INTERNATIONAL_3"],
+		[2650,193,175,175,"BACKSPACE"],
+		[18,381,269,175,"TAB"],
+		[300,381,175,175,"Q"],
+		[488,381,175,175,"W"],
+		[676,381,175,175,"E"],
+		[864,381,175,175,"R"],
+		[1052,381,175,175,"T"],
+		[1240,381,175,175,"Y"],
+		[1428,381,175,175,"U"],
+		[1616,381,175,175,"I"],
+		[1804,381,175,175,"O"],
+		[1992,381,175,175,"P"],
+		[2180,381,175,175,"LEFT_BRACKET"],
+		[2368,381,175,175,"RIGHT_BRACKET"],
+		[18,569,316,175,"CAPS_LOCK"],
+		[347,569,175,175,"A"],
+		[535,569,175,175,"S"],
+		[723,569,175,175,"D"],
+		[911,569,175,175,"F"],
+		[1099,569,175,175,"G"],
+		[1287,569,175,175,"H"],
+		[1475,569,175,175,"J"],
+		[1663,569,175,175,"K"],
+		[1851,569,175,175,"L"],
+		[2039,569,175,175,"SEMICOLON"],
+		[2227,569,175,175,"QUOTE"],
+		[2415,569,175,175,"NONUS_HASH"],
+		[2556,381,269,175,"ENTER"],
+		[2603,556,222,188,"ENTER"],
+		[18,757,410,175,"LEFT_SHIFT"],
+		[441,757,175,175,"Z"],
+		[629,757,175,175,"X"],
+		[817,757,175,175,"C"],
+		[1005,757,175,175,"V"],
+		[1193,757,175,175,"B"],
+		[1381,757,175,175,"N"],
+		[1569,757,175,175,"M"],
+		[1757,757,175,175,"COMMA"],
+		[1945,757,175,175,"DOT"],
+		[2133,757,175,175,"SLASH"],
+		[2321,757,175,175,"INTERNATIONAL_1"],
+		[2509,757,316,175,"RIGHT_SHIFT"],
+		[18,945,269,175,"LEFT_CTRL"],
+		[300,945,222,175,"LEFT_GUI"],
+		[535,945,222,175,"LEFT_ALT"],
+		[770,945,269,175,"INTERNATIONAL_5"],
+		[1052,945,457,175,"SPACE"],
+		[1522,945,269,175,"INTERNATIONAL_4"],
+		[1804,945,222,175,"INTERNATIONAL_2"],
+		[2039,945,175,175,"RIGHT_ALT"],
+		[2227,945,175,175,"RIGHT_GUI"],
+		[2415,945,175,175,"RIGHT_CTRL"],
+		[2603,945,222,175,"FN"]
+	];
+	for (const k of keys) {
+		keyboard.keys.push(new key(
+			defaultZ(), k[0], k[1], k[2], k[3], defaultIsRect(),
+			defaultColor(), defaultOutputType(), k[4], false, false, "", -1, -1, -1,
+			blankModType(), blankModText(), blankModShader(), blankOutputValue()));
+	}
+
+	renderKeys();
+	openGlobalParameters();
+}
+
+function newKeyboardTriplex(askName){
+	closeKey();
+	closeGlobalParameters();
+	console.log('Triplex keyboard');
+	if (askName){
+		let keyboardName = prompt("New Keyboard Layout Name:");
+		if (keyboardName != null && keyboardName.length > 0)
+			newKeyboard(keyboardName);
+		else
+			return;
+	}
+
+	const keys = [
+		[18,5,175,175,"ESCAPE"],
+		[394,5,175,175,"F1"],
+		[582,5,175,175,"F2"],
+		[770,5,175,175,"F3"],
+		[958,5,175,175,"F4"],
+		[1240,5,175,175,"F5"],
+		[1428,5,175,175,"F6"],
+		[1616,5,175,175,"F7"],
+		[1804,5,175,175,"F8"],
+		[2086,5,175,175,"F9"],
+		[2274,5,175,175,"F10"],
+		[2462,5,175,175,"F11"],
+		[2650,5,175,175,"F12"],
+		[18,193,175,175,"GRAVE"],
+		[206,193,175,175,"1"],
+		[394,193,175,175,"2"],
+		[582,193,175,175,"3"],
+		[770,193,175,175,"4"],
+		[958,193,175,175,"5"],
+		[1146,193,175,175,"6"],
+		[1334,193,175,175,"7"],
+		[1522,193,175,175,"8"],
+		[1710,193,175,175,"9"],
+		[1898,193,175,175,"0"],
+		[2086,193,175,175,"MINUS"],
+		[2274,193,175,175,"EQUAL"],
+		[2462,193,175,175,"INTERNATIONAL_3"],
+		[2650,193,175,175,"BACKSPACE"],
+		[18,381,269,175,"TAB"],
+		[300,381,175,175,"Q"],
+		[488,381,175,175,"W"],
+		[676,381,175,175,"E"],
+		[864,381,175,175,"R"],
+		[1052,381,175,175,"T"],
+		[1240,381,175,175,"Y"],
+		[1428,381,175,175,"U"],
+		[1616,381,175,175,"I"],
+		[1804,381,175,175,"O"],
+		[1992,381,175,175,"P"],
+		[2180,381,175,175,"LEFT_BRACKET"],
+		[2368,381,175,175,"RIGHT_BRACKET"],
+		[2556,381,269,175,"BACKSLASH"],
+		[18,569,316,175,"CAPS_LOCK"],
+		[347,569,175,175,"A"],
+		[535,569,175,175,"S"],
+		[723,569,175,175,"D"],
+		[911,569,175,175,"F"],
+		[1099,569,175,175,"G"],
+		[1287,569,175,175,"H"],
+		[1475,569,175,175,"J"],
+		[1663,569,175,175,"K"],
+		[1851,569,175,175,"L"],
+		[2039,569,175,175,"SEMICOLON"],
+		[2227,569,175,175,"QUOTE"],
+		[2415,569,175,175,"NONUS_HASH"],
+		[2603,569,222,175,"ENTER"],
+		[18,757,222,175,"LEFT_SHIFT"],
+		[253,757,175,175,"NONUS_BACKSLASH"],
+		[441,757,175,175,"Z"],
+		[629,757,175,175,"X"],
+		[817,757,175,175,"C"],
+		[1005,757,175,175,"V"],
+		[1193,757,175,175,"B"],
+		[1381,757,175,175,"N"],
+		[1569,757,175,175,"M"],
+		[1757,757,175,175,"COMMA"],
+		[1945,757,175,175,"DOT"],
+		[2133,757,175,175,"SLASH"],
+		[2321,757,175,175,"INTERNATIONAL_1"],
+		[2509,757,316,175,"RIGHT_SHIFT"],
+		[18,945,269,175,"LEFT_CTRL"],
+		[300,945,222,175,"LEFT_GUI"],
+		[535,945,222,175,"LEFT_ALT"],
+		[770,945,269,175,"INTERNATIONAL_5"],
+		[1052,945,457,175,"SPACE"],
+		[1522,945,269,175,"INTERNATIONAL_4"],
+		[1804,945,222,175,"INTERNATIONAL_2"],
+		[2039,945,175,175,"RIGHT_ALT"],
+		[2227,945,175,175,"RIGHT_GUI"],
+		[2415,945,175,175,"RIGHT_CTRL"],
+		[2603,945,222,175,"FN"]
+	];
+	for (const k of keys) {
+		keyboard.keys.push(new key(
+			defaultZ(), k[0], k[1], k[2], k[3], defaultIsRect(),
+			defaultColor(), defaultOutputType(), k[4], false, false, "", -1, -1, -1,
+			blankModType(), blankModText(), blankModShader(), blankOutputValue()));
+	}
+
+	renderKeys();
+	openGlobalParameters();
+}
+
+function addKeypad(){
+	console.log("Added Keypad");
+	const keys = [
+		[2900,5,175,175,"INSERT"],
+		[3088,5,175,175,"PRINT_SCREEN"],
+		[3276,5,175,175,"SCROLL_LOCK"],
+		[3464,5,175,175,"PAUSE"],
+		[3652,5,175,175,"NUM_LOCK"],
+		[2900,193,175,175,"DELETE"],
+		[3088,193,175,175,"KP_7"],
+		[3276,193,175,175,"KP_8"],
+		[3464,193,175,175,"KP_9"],
+		[3652,193,175,175,"KP_SLASH"],
+		[2900,381,175,175,"HOME"],
+		[3088,381,175,175,"KP_4"],
+		[3276,381,175,175,"KP_5"],
+		[3464,381,175,175,"KP_6"],
+		[3652,381,175,175,"KP_ASTERISK"],
+		[2900,569,175,175,"END"],
+		[3088,569,175,175,"KP_1"],
+		[3276,569,175,175,"KP_2"],
+		[3464,569,175,175,"KP_3"],
+		[3652,569,175,175,"KP_MINUS"],
+		[2900,757,175,175,"PAGE_UP"],
+		[3088,757,175,175,"KP_0"],
+		[3276,757,175,175,"UP"],
+		[3464,757,175,175,"KP_DOT"],
+		[3652,757,175,175,"KP_PLUS"],
+		[2900,945,175,175,"PAGE_DOWN"],
+		[3088,945,175,175,"LEFT"],
+		[3276,945,175,175,"DOWN"],
+		[3464,945,175,175,"RIGHT"],
+		[3652,945,175,175,"KP_ENTER"]
+	];
+	for (const k of keys) {
+		keyboard.keys.push(new key(
+			defaultZ(), k[0], k[1], k[2], k[3], defaultIsRect(),
+			defaultColor(), defaultOutputType(), k[4], false, false, "", -1, -1, -1,
+			blankModType(), blankModText(), blankModShader(), blankOutputValue()));
+	}
 	renderKeys();
 }
 

@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<meta charset="utf-16"/>
 		<link rel="icon" href="icon.png"></link>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -20,11 +19,14 @@
 				<div class="dropdown-content">
 					<button onclick="newKeyboardANSI(true)" class="coolButton">New ANSI</button>
 					<button onclick="newKeyboardISO(true)" class="coolButton">New ISO</button>
+					<button onclick="newKeyboardJIS(true)" class="coolButton">New JIS</button>
+					<button onclick="newKeyboardTriplex(true)" class="coolButton">New Triplex</button>
 				</div>
 			</div>
 			<div class="dropdown">
 				<button class="coolButton dropbtn">Add Rightside Keyboard ▼</button>
 				<div class="dropdown-content">
+					<button onclick="addKeypad()" class="coolButton">Add Keypad</button>
 					<button onclick="addMacroPad()" class="coolButton">Add Macro Pad</button>
 					<button onclick="addBigPad()" class="coolButton">Add Large Macros</button>
 				</div>
