@@ -64,7 +64,7 @@ make plugin name=myCustomPlugin src=plugin
 ```
 
 ### Keyboard Profile online designer
-The latest version of this designer is hosted at https://notin.tokyo/ASK
+The latest version of this designer is hosted at https://notin.tokyo/ASK  
 The code for this website is stored in keyboard/profileDesigner
 
 
