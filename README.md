@@ -12,7 +12,7 @@ The first open source all-screen keyboard. This repository contains all the digi
 * Various wires and cables to put everything together
 
 ### To enable SPI on Raspberry Pi running Ubuntu
-Due to the 3840x1100 wide display resolution, Raspbian cannot be used. Ubutuntu then requires a little more settup to access all the Pi's features. 
+Due to the 3840x1100 wide display resolution, Raspbian cannot be used. Ubuntu then requires a little more settup to access all the Pi's features. 
 In /boot/firmware/config.txt place the following text
 ```
 enable_uart=1
